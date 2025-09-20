@@ -13,7 +13,7 @@ def main():
     load_dotenv()
     
     # Validate required environment variables
-    required_vars = ['OURA_CLIENT_ID', 'OURA_CLIENT_SECRET', 'OURA_ACCESS_TOKEN', 'OURA_REFRESH_TOKEN']
+    required_vars = ['OURA_CLIENT_ID', 'OURA_CLIENT_SECRET', 'OURA_REFRESH_TOKEN']
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     
     if missing_vars:

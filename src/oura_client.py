@@ -24,8 +24,17 @@ def refresh_access_token():
 def make_api_request(endpoint, auto_refresh=True):
     """Make API request with automatic token refresh on 401"""
     url = f"https://api.ouraring.com/v2/{endpoint}"
-    headers = {"Authorization": f"Bearer {os.getenv('OURA_ACCESS_TOKEN')}"}
     
+    # Get access token, or empty string if missing
+    access_token = os.getenv('OURA_ACCESS_TOKEN', '')
+    
+    # If no access token, refresh immediately
+    if not access_token and auto_refresh:
+        print("No access token found, refreshing...")
+        access_token = refresh_access_token()
+        os.environ['OURA_ACCESS_TOKEN'] = access_token
+    
+    headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)
     
     if response.status_code == 401 and auto_refresh:
