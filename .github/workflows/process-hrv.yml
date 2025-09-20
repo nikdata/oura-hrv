@@ -49,9 +49,16 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add data/*.json
-        git diff --staged --quiet || git commit -m "Update HRV data - $(date -u +"%Y-%m-%d %H:%M UTC")"
-        git push
+        
+        # Check if any JSON files exist before trying to add them
+        if ls data/*.json 1> /dev/null 2>&1; then
+          git add data/*.json
+          git diff --staged --quiet || git commit -m "Update HRV data - $(date -u +"%Y-%m-%d %H:%M UTC")"
+          git push
+          echo "✅ HRV data files committed and pushed"
+        else
+          echo "ℹ️ No HRV data files found to commit"
+        fi
     
     - name: Log completion
       run: |
