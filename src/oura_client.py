@@ -112,11 +112,11 @@ def make_api_request(endpoint, auto_refresh=True):
     response.raise_for_status()
     return response.json()
 
-def get_recent_sleep_hrv(days=3):
+def get_recent_sleep_hrv(days=10):
     """Get recent sleep HRV data from Oura"""
     from datetime import datetime, timedelta
     
-    end_date = datetime.now().date()
+    end_date = datetime.now().date() + timedelta(days=1) # adding 1 day to ensure current day data is accounted for
     start_date = end_date - timedelta(days=days)
     
     print(f"Fetching sleep data from {start_date} to {end_date}")
