@@ -2,22 +2,60 @@ import os
 import requests
 from datetime import datetime, timedelta
 
+# def refresh_access_token():
+#     """Only call this when you get a 401 error"""
+#     url = "https://api.ouraring.com/oauth/token"
+#     data = {
+#         "grant_type": "refresh_token",
+#         "refresh_token": os.getenv("OURA_REFRESH_TOKEN"),
+#         "client_id": os.getenv("OURA_CLIENT_ID"),
+#         "client_secret": os.getenv("OURA_CLIENT_SECRET")
+#     }
+    
+#     response = requests.post(url, data=data)
+#     response.raise_for_status()
+#     tokens = response.json()
+    
+#     # Update GitHub Secrets would require GitHub CLI or API
+#     # For now, print new token for manual update
+#     print(f"New access token: {tokens['access_token']}")
+#     return tokens['access_token']
+
 def refresh_access_token():
     """Only call this when you get a 401 error"""
     url = "https://api.ouraring.com/oauth/token"
+    
+    # Debug: Check if all required variables are present
+    client_id = os.getenv("OURA_CLIENT_ID")
+    client_secret = os.getenv("OURA_CLIENT_SECRET") 
+    refresh_token = os.getenv("OURA_REFRESH_TOKEN")
+    
+    print(f"Client ID present: {bool(client_id)}")
+    print(f"Client Secret present: {bool(client_secret)}")
+    print(f"Refresh Token present: {bool(refresh_token)}")
+    
+    # Only show first/last few characters for security
+    if client_id:
+        print(f"Client ID: {client_id[:4]}...{client_id[-4:]}")
+    if refresh_token:
+        print(f"Refresh Token: {refresh_token[:4]}...{refresh_token[-4:]}")
+    
     data = {
         "grant_type": "refresh_token",
-        "refresh_token": os.getenv("OURA_REFRESH_TOKEN"),
-        "client_id": os.getenv("OURA_CLIENT_ID"),
-        "client_secret": os.getenv("OURA_CLIENT_SECRET")
+        "refresh_token": refresh_token,
+        "client_id": client_id,
+        "client_secret": client_secret
     }
     
     response = requests.post(url, data=data)
+    
+    # Debug: Show response details
+    print(f"Response status: {response.status_code}")
+    print(f"Response text: {response.text}")
+    
     response.raise_for_status()
     tokens = response.json()
     
-    # Update GitHub Secrets would require GitHub CLI or API
-    # For now, print new token for manual update
     print(f"New access token: {tokens['access_token']}")
     return tokens['access_token']
 
