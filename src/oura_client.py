@@ -3,6 +3,9 @@ import os
 import base64
 from nacl import encoding, public
 
+# define the source number of days I want to get
+days_to_get = 3
+
 def update_github_secret(secret_name, secret_value, repo_owner, repo_name, github_token):
     """Update a GitHub repository secret"""
     
@@ -112,7 +115,7 @@ def make_api_request(endpoint, auto_refresh=True):
     response.raise_for_status()
     return response.json()
 
-def get_recent_sleep_hrv(days=10):
+def get_recent_sleep_hrv(days=days_to_get):
     """Get recent sleep HRV data from Oura"""
     from datetime import datetime, timedelta
     

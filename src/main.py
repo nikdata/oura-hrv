@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from oura_client import get_recent_sleep_hrv
 from data_processor import extract_hrv_timeseries, save_nightly_hrv_files
 
+days_to_get = 10
+
 def main():
     # Load environment variables (for local testing)
     load_dotenv()
@@ -22,7 +24,7 @@ def main():
     try:
         # Get recent sleep data (last 3 days to catch any missed data)
         print("Fetching recent sleep HRV data from Oura...")
-        sleep_data = get_recent_sleep_hrv(days=3)
+        sleep_data = get_recent_sleep_hrv(days=days_to_get)
         
         if not sleep_data.get('data'):
             print("No sleep data returned from Oura API")

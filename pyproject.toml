@@ -8,6 +8,7 @@ dependencies = [
     "jupyterlab>=4.4.7",
     "polars>=1.33.1",
     "pydantic>=2.11.9",
+    "pynacl>=1.6.0",
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
 ]
