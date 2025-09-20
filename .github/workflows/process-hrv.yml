@@ -41,6 +41,8 @@ jobs:
         OURA_CLIENT_ID: ${{ secrets.OURA_CLIENT_ID }}
         OURA_CLIENT_SECRET: ${{ secrets.OURA_CLIENT_SECRET }}
         OURA_REFRESH_TOKEN: ${{ secrets.OURA_REFRESH_TOKEN }}
+        REPO_SECRETS_TOKEN: ${{ secrets.REPO_SECRETS_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         mkdir -p data
         cd src
