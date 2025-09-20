@@ -15,7 +15,8 @@ def extract_hrv_timeseries(sleep_data):
             
             # Process each HRV reading
             for i, hrv_value in enumerate(night['hrv']['items']):
-                if hrv_value is not None:  # Skip None values
+                # Filter out None, 0, and invalid values
+                if hrv_value is not None and hrv_value != 0 and hrv_value > 0:
                     measurement_time = start_time + timedelta(seconds=i * interval_seconds)
                     
                     hrv_entries.append({
@@ -56,12 +57,13 @@ def save_nightly_hrv_files(sleep_data):
                 json.dump(night_hrv, f, indent=2)
             
             files_created.append(filename)
-            print(f"Saved {len(night_hrv)} HRV readings to {filename}")
+            print(f"Saved {len(night_hrv)} valid HRV readings to {filename}")
         else:
-            print(f"No HRV data found for {night_date}")
+            print(f"No valid HRV data found for {night_date} (all values filtered out)")
     
     return files_created
 
+# Keep the cleanup function as-is
 # def cleanup_old_files(days_to_keep=30):
 #     """Remove HRV files older than specified days"""
 #     data_dir = Path("data")
