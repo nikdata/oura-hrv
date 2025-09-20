@@ -10,7 +10,9 @@ on:
   # Chicago is UTC-6 (CST) or UTC-5 (CDT), so 9:45 AM Chicago = 14:45 UTC (CDT) or 15:45 UTC (CST)
   # Using 14:45 UTC for Daylight Saving Time (March-November)
   schedule:
-    - cron: '45 14 * * *'
+    - cron: '45 10,12 * * *' # approx. 5:45 & 7:45 CDT
+    - cron: '45 14,16,18,20 * * *' # rerun every 2 hrs 3 more times
+    - cron: '45 23 * * *' # rerun one last time at 6ish
   
   # Manual trigger for testing
   workflow_dispatch:
