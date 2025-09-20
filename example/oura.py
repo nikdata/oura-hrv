@@ -122,7 +122,7 @@ print(f"Client ID: {CLIENT_ID}")
 print(f"Redirect URI: {REDIRECT_URI}")
 
 # Step 2: After visiting URL and getting redirected, extract the 'code' parameter
-authorization_code = "GBKPHXQTRUJW5NSDVKDCV72NV5WN2X2V"
+authorization_code = "QQ3EYFXIAE6Q5ZH5SVJXJ2TWRHTNE546"
 
 # Step 3: Exchange code for tokens
 tokens = exchange_code_for_tokens(authorization_code)
