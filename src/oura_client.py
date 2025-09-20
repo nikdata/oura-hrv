@@ -84,3 +84,41 @@ def refresh_access_token():
     
     print(f"New access token: {new_access_token}")
     return new_access_token
+
+def make_api_request(endpoint, auto_refresh=True):
+    """Make API request with automatic token refresh on 401"""
+    url = f"https://api.ouraring.com/v2/{endpoint}"
+    
+    # Get access token, or empty string if missing
+    access_token = os.getenv('OURA_ACCESS_TOKEN', '')
+    
+    # If no access token, refresh immediately
+    if not access_token and auto_refresh:
+        print("No access token found, refreshing...")
+        access_token = refresh_access_token()
+        os.environ['OURA_ACCESS_TOKEN'] = access_token
+    
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 401 and auto_refresh:
+        # Token expired, refresh and retry
+        new_token = refresh_access_token()
+        # Update the environment variable for this session
+        os.environ['OURA_ACCESS_TOKEN'] = new_token
+        headers["Authorization"] = f"Bearer {new_token}"
+        response = requests.get(url, headers=headers)
+    
+    response.raise_for_status()
+    return response.json()
+
+def get_recent_sleep_hrv(days=3):
+    """Get recent sleep HRV data from Oura"""
+    from datetime import datetime, timedelta
+    
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    print(f"Fetching sleep data from {start_date} to {end_date}")
+    endpoint = f"usercollection/sleep?start_date={start_date}&end_date={end_date}"
+    return make_api_request(endpoint)
