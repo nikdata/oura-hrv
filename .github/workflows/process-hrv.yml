@@ -42,6 +42,7 @@ jobs:
         OURA_CLIENT_SECRET: ${{ secrets.OURA_CLIENT_SECRET }}
         OURA_REFRESH_TOKEN: ${{ secrets.OURA_REFRESH_TOKEN }}
       run: |
+        mkdir -p data
         cd src
         python main.py
     
@@ -50,15 +51,23 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # Check if any JSON files exist before trying to add them
+        # Check both possible locations for JSON files
         if ls data/*.json 1> /dev/null 2>&1; then
+          echo "Found JSON files in data/"
           git add data/*.json
-          git diff --staged --quiet || git commit -m "Update HRV data - $(date -u +"%Y-%m-%d %H:%M UTC")"
-          git push
-          echo "✅ HRV data files committed and pushed"
+        elif ls src/data/*.json 1> /dev/null 2>&1; then
+          echo "Found JSON files in src/data/, moving to data/"
+          mkdir -p data
+          mv src/data/*.json data/
+          git add data/*.json
         else
           echo "ℹ️ No HRV data files found to commit"
+          exit 0
         fi
+        
+        git diff --staged --quiet || git commit -m "Update HRV data - $(date -u +"%Y-%m-%d %H:%M UTC")"
+        git push
+        echo "✅ HRV data files committed and pushed"
     
     - name: Log completion
       run: |
