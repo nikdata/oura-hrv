@@ -19,8 +19,18 @@ def extract_hrv_timeseries(sleep_data):
                 if hrv_value is not None and hrv_value != 0 and hrv_value > 0:
                     measurement_time = start_time + timedelta(seconds=i * interval_seconds)
                     
+                    # Convert to Apple Shortcuts friendly format + debugging info
+                    # Keep original timezone from Oura (handles travel & DST automatically)
+                    unix_timestamp = int(measurement_time.timestamp())
+                    human_readable = measurement_time.strftime("%Y-%m-%d %H:%M:%S")
+                    timezone_name = measurement_time.strftime("%Z")  # Oura's timezone
+                    timezone_offset = measurement_time.strftime("%z")  # Oura's offset
+                    
                     hrv_entries.append({
-                        'date': measurement_time.isoformat(),
+                        'date': unix_timestamp,
+                        'date_readable': human_readable,
+                        'timezone': timezone_name,
+                        'timezone_offset': timezone_offset,
                         'hrv': hrv_value,
                         'unit': 'ms',
                         'source': 'oura_ring_rmssd',
@@ -57,13 +67,12 @@ def save_nightly_hrv_files(sleep_data):
                 json.dump(night_hrv, f, indent=2)
             
             files_created.append(filename)
-            print(f"Saved {len(night_hrv)} valid HRV readings to {filename}")
+            print(f"Saved {len(night_hrv)} HRV readings to {filename}")
         else:
             print(f"No valid HRV data found for {night_date} (all values filtered out)")
     
     return files_created
 
-# Keep the cleanup function as-is
 # def cleanup_old_files(days_to_keep=30):
 #     """Remove HRV files older than specified days"""
 #     data_dir = Path("data")
