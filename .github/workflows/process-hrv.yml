@@ -10,7 +10,7 @@ on:
   # Chicago is UTC-6 (CST) or UTC-5 (CDT), so 9:45 AM Chicago = 14:45 UTC (CDT) or 15:45 UTC (CST)
   # Using 14:45 UTC for Daylight Saving Time (March-November)
   schedule:
-    - cron: '*/15 10,11,12,13,14 * * *'  # run every 15 minutes in the morning (5 CDT - 9:45 CDT)
+    - cron: '*/20 10,11,12,13,14 * * *'  # run every 20 minutes in the morning (5 CDT - 9:45 CDT)
     - cron: '0 16,17,18,19,20 * * *' # rerun on the hour starting at 11 am CDT
   
   # Manual trigger for testing
