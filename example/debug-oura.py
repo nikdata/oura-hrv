@@ -146,11 +146,12 @@ def main():
     # Calculate date ranges
     days_past = 10
     today = (datetime.now()+ timedelta(days=1)).strftime('%Y-%m-%d') 
+    today2 = datetime.now().strftime('%Y-%m-%d')
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     three_days_ago = (datetime.now() - timedelta(days=days_past)).strftime('%Y-%m-%d')
     
     print(f"📅 Date ranges:")
-    print(f"   Today: {today}")
+    print(f"   Today: {datetime.now().strftime('%Y-%m-%d')}")
     print(f"   Yesterday: {yesterday}")
     print(f"   {days_past} days ago: {three_days_ago}")
     print(f"   Current time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S CDT')}")
@@ -198,10 +199,10 @@ def main():
     
     # Today-specific check
     if today in sessions_by_date:
-        print(f"\n🎯 Today's data ({today}) IS available!")
+        print(f"\n🎯 Today's data ({today2}) IS available!")
         print("   Your automation should be working correctly.")
     else:
-        print(f"\n⚠️  Today's data ({today}) is NOT yet available.")
+        print(f"\n⚠️  Today's data ({today2}) is NOT yet available.")
         print("   Oura may still be processing your sleep session.")
         
         # Check if yesterday is available
