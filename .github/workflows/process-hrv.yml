@@ -46,8 +46,7 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         mkdir -p data
-        cd src
-        python main.py
+        python src/main.py
     
     - name: Commit and push changes
       run: |
