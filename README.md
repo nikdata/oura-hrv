@@ -147,7 +147,7 @@ data/
 
 ## ⚙️ Automation Schedule
 
-The system runs multiple times daily to ensure reliable data capture:
+The system runs multiple times daily (using GitHub Actions) to ensure reliable data capture:
 
 ```yaml
 # GitHub Actions Schedule (All times CDT)

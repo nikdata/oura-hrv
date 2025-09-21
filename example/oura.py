@@ -1,3 +1,13 @@
+"""
+Oura API Token Refresh Script
+
+- Most functions can be loaded ahead of time.
+
+- All code below the "Interactive OAuth Setup (run these one by one)"
+  must be run interactively. Browser-based authorization is required.
+
+"""
+
 import os
 import requests
 from dotenv import load_dotenv
@@ -17,7 +27,7 @@ CLIENT_ID = os.getenv("OURA_CLIENT_ID")
 CLIENT_SECRET = os.getenv("OURA_CLIENT_SECRET")
 REDIRECT_URI = "http://example.com/callback"  # You can use any localhost URL
 
-
+# Function definitions
 def get_authorization_url():
     """Generate the URL to visit for OAuth authorization"""
     params = {
@@ -27,7 +37,6 @@ def get_authorization_url():
         "scope": "personal daily heartrate"
     }
     return f"{AUTH_URL}?{urlencode(params)}"
-
 
 def exchange_code_for_tokens(authorization_code):
     """Exchange authorization code for access and refresh tokens"""
@@ -47,7 +56,6 @@ def exchange_code_for_tokens(authorization_code):
         print(f"Error: {response.status_code}")
         print(response.text)
         return None
-
 
 def refresh_access_token():
     """Use refresh token to get a new access token"""
@@ -69,13 +77,11 @@ def refresh_access_token():
         print(response.text)
         return None
 
-
 def save_tokens_to_env(token_data):
     """Save tokens to .env file (you'll need to do this manually for now)"""
     print("Add these to your .env file:")
     print(f"OURA_ACCESS_TOKEN={token_data['access_token']}")
     print(f"OURA_REFRESH_TOKEN={token_data['refresh_token']}")
-
 
 def make_api_request(endpoint):
     """Make authenticated request to Oura API"""
@@ -96,7 +102,6 @@ def make_api_request(endpoint):
         print(response.text)
         return None
 
-
 def get_hrv_data(start_date, end_date):
     """Get HRV data for date range (YYYY-MM-DD format)"""
     endpoint = f"usercollection/heartrate?start_date={start_date}&end_date={end_date}"
@@ -114,62 +119,27 @@ auth_url = get_authorization_url()
 print("Visit this URL to authorize:")
 print(auth_url)
 
-auth_url = get_authorization_url()
-print("Full authorization URL:")
-print(auth_url)
-print("\nURL parts:")
-print(f"Client ID: {CLIENT_ID}")
-print(f"Redirect URI: {REDIRECT_URI}")
+#  === DEBUG FOR STEP 1 === #
+# auth_url = get_authorization_url()
+# print("Full authorization URL:")
+# print(auth_url)
+# print("\nURL parts:")
+# print(f"Client ID: {CLIENT_ID}")
+# print(f"Redirect URI: {REDIRECT_URI}")
 
 # Step 2: After visiting URL and getting redirected, extract the 'code' parameter
-authorization_code = "QQ3EYFXIAE6Q5ZH5SVJXJ2TWRHTNE546"
+# This authorization code can be found in the URL after authorizing app
+authorization_code = "VDONIQJE4SGI7A54WOSMP7QIEK3IC2JH"
 
 # Step 3: Exchange code for tokens
 tokens = exchange_code_for_tokens(authorization_code)
-print(tokens)
+
+# === DEBUG FOR STEP 3 === #
+# print(tokens) # debug only
 
 # Step 4: Save tokens to .env file
 save_tokens_to_env(tokens)
 
-# === After tokens are saved, test API access ===
-
-# Test API access
+# === After tokens are saved, test API access === #
 user_info = make_api_request("usercollection/personal_info")
 print(user_info)
-
-# Get recent HRV data
-hrv_data = get_hrv_data("2025-09-19", "2025-09-20")
-print(hrv_data)
-
-sleep_hrv = get_sleep_hrv("2025-09-18", "2025-09-19")
-print(sleep_hrv)
-
-def extract_hrv_timeseries(sleep_data):
-    """Extract time series HRV data for Apple Health"""
-    hrv_entries = []
-    
-    for night in sleep_data['data']:
-        if night['hrv'] and night['hrv']['items']:
-            # Parse the starting timestamp
-            from datetime import datetime, timedelta
-            import dateutil.parser
-            
-            start_time = dateutil.parser.parse(night['hrv']['timestamp'])
-            interval_seconds = int(night['hrv']['interval'])  # 300 seconds = 5 minutes
-            
-            # Process each HRV reading
-            for i, hrv_value in enumerate(night['hrv']['items']):
-                if hrv_value is not None:  # Skip None values
-                    measurement_time = start_time + timedelta(seconds=i * interval_seconds)
-                    
-                    hrv_entries.append({
-                        'date': measurement_time.isoformat(),
-                        'hrv': hrv_value,
-                        'unit': 'ms',
-                        'source': 'oura_ring_rmssd',
-                        'measurement_type': 'rMSSD'
-                    })
-    
-    return hrv_entries
-
-extract_hrv_timeseries(sleep_hrv)

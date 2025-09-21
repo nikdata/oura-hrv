@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
 Oura Sleep Data Debug Script
-Debug script to check sleep data availability and timing issues
+
+Debug script to check sleep data availability and timing issues.
+
+This file is key to determining if data are present on Oura Cloud but not being ingested through API.
+
+Tokens may need to be manually updated using the oura.py file.
 """
 
 import os
@@ -145,8 +150,8 @@ def main():
     
     # Calculate date ranges
     days_past = 10
-    today = (datetime.now()+ timedelta(days=1)).strftime('%Y-%m-%d') 
-    today2 = datetime.now().strftime('%Y-%m-%d')
+    today = (datetime.now()+ timedelta(days=1)).strftime('%Y-%m-%d') # this tomorrow's date
+    today2 = datetime.now().strftime('%Y-%m-%d') # this is today's date
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     three_days_ago = (datetime.now() - timedelta(days=days_past)).strftime('%Y-%m-%d')
     
