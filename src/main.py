@@ -6,7 +6,8 @@ Designed to run in GitHub Actions when triggered by webhook or schedule
 import os
 from dotenv import load_dotenv
 from oura_client import get_recent_sleep_hrv
-from data_processor import extract_hrv_timeseries, save_nightly_hrv_files
+# from data_processor import extract_hrv_timeseries, save_nightly_hrv_files
+from data_processor import save_all_sleep_metrics
 
 days_to_get = 10
 
@@ -34,7 +35,8 @@ def main():
         
         # Save each night to individual files
         print("Processing and saving HRV data...")
-        files_created = save_nightly_hrv_files(sleep_data)
+        # files_created = save_nightly_hrv_files(sleep_data)
+        files_created = save_all_sleep_metrics(sleep_data)
         
         if files_created:
             print(f"✅ Successfully processed {len(files_created)} files:")

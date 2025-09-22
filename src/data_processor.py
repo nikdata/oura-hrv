@@ -73,6 +73,77 @@ def save_nightly_hrv_files(sleep_data):
     
     return files_created
 
+def extract_rhr_data(sleep_data):
+    """Extract RHR (lowest_heart_rate) data for Apple Health"""
+    rhr_entries = []
+    
+    for night in sleep_data['data']:
+        lowest_hr = night.get('lowest_heart_rate')
+        night_date = night['day']  # Format: "2025-09-20"
+        
+        if lowest_hr is not None and lowest_hr > 0:
+            # Use the day as timestamp (midnight UTC for that date)
+            day_dt = datetime.strptime(night_date, "%Y-%m-%d")
+            unix_timestamp = int(day_dt.timestamp())
+            human_readable = day_dt.strftime("%Y-%m-%d %H:%M:%S")
+            
+            rhr_entries.append({
+                'date': unix_timestamp,
+                'date_readable': human_readable,
+                'timezone': 'UTC',
+                'timezone_offset': '+0000',
+                'rhr': lowest_hr,
+                'unit': 'bpm',
+                'source': 'oura_ring_sleep',
+                'measurement_type': 'lowest_heart_rate'
+            })
+    
+    return rhr_entries
+
+def save_nightly_rhr_files(sleep_data):
+    """Save each night's RHR data to separate files with YYYY-MM-DD_sleep-rhr.json format"""
+    Path("data").mkdir(exist_ok=True)
+    files_created = []
+    
+    for night in sleep_data['data']:
+        # Extract date from the sleep session
+        night_date = night['day']  # Format: "2025-09-20"
+        
+        # Process RHR for this night only
+        night_rhr = extract_rhr_data({'data': [night]})
+        
+        if night_rhr:
+            filename = f"data/{night_date}_sleep-rhr.json"
+            
+            # Check if file already exists and has the same data
+            if Path(filename).exists():
+                with open(filename, 'r') as f:
+                    existing_data = json.load(f)
+                if existing_data == night_rhr:
+                    print(f"Skipping {filename} - data unchanged")
+                    continue
+            
+            # Save individual night file
+            with open(filename, 'w') as f:
+                json.dump(night_rhr, f, indent=2)
+            
+            files_created.append(filename)
+            print(f"Saved RHR {night_rhr[0]['rhr']} bpm to {filename}")
+        else:
+            print(f"No valid RHR data found for {night_date}")
+    
+    return files_created
+
+def save_all_sleep_metrics(sleep_data):
+    """Save both HRV and RHR data from sleep sessions"""
+    print("Processing HRV data...")
+    hrv_files = save_nightly_hrv_files(sleep_data)
+    
+    print("Processing RHR data...")
+    rhr_files = save_nightly_rhr_files(sleep_data)
+    
+    return hrv_files + rhr_files
+
 # def cleanup_old_files(days_to_keep=30):
 #     """Remove HRV files older than specified days"""
 #     data_dir = Path("data")
