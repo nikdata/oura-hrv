@@ -1,13 +1,14 @@
-# Oura HRV to Apple Health Automation Pipeline
+# Oura HRV & RHR to Apple Health Automation Pipeline
 
-A fully automated system that transfers detailed Heart Rate Variability (HRV) time series data from your Oura Ring to Apple Health.
+A fully automated system that transfers detailed Heart Rate Variability (HRV) time series data and Resting Heart Rate (RHR) measurements from your Oura Ring to Apple Health.
 
 > [!IMPORTANT]  
-> **Why This Matters**: The Oura Ring captures superior sleep HRV data (80-96 readings per night) using rMSSD measurements, but doesn't sync this rich dataset to Apple Health. This automation bridges that gap, making detailed HRV data available for any health apps that integrate with Apple Health.
+> **Why This Matters**: The Oura Ring captures superior sleep HRV data (80-96 readings per night) using rMSSD measurements and precise RHR timing, but doesn't sync this rich dataset to Apple Health. This automation bridges that gap, making detailed physiological data available for any health apps that integrate with Apple Health.
 
 ## ✨ Key Features
 
 - **Rich Time Series Data**: Captures 5-minute interval HRV readings throughout sleep (vs single daily averages)
+- **Precise RHR Timing**: Records the actual timestamp when your lowest heart rate occurred during sleep
 - **Fully Automated**: Zero-maintenance pipeline with self-updating OAuth tokens
 - **Travel & DST Proof**: Automatic timezone handling without manual adjustments  
 - **Duplicate Prevention**: Smart file-based system prevents data overwrites
@@ -21,6 +22,17 @@ A fully automated system that transfers detailed Heart Rate Variability (HRV) ti
 - **Oura Ring**: Uses **rMSSD** (Root Mean Square of Successive Differences) - optimized for sleep analysis
 - **Apple Watch**: Uses **SDNN** (Standard Deviation of NN intervals) - general purpose measurement
 - **Key Insight**: Oura's sleep-focused rMSSD provides more consistent and meaningful data for recovery tracking
+
+### RHR Measurement Methodology
+This automation captures **Resting Heart Rate (RHR)** exactly as Oura calculates it:
+
+- **Oura's Method**: Uses the **lowest heart rate value** recorded during sleep
+- **Timing**: Records the actual timestamp when this lowest value occurred (not midnight or wake-up time)
+- **Data Source**: Extracted from Oura's 5-minute heart rate intervals during sleep
+- **Multiple Occurrences**: If the same lowest value occurs multiple times, uses the last occurrence (representing sustained deep rest)
+
+> [!NOTE]  
+> **Important Distinction**: While Oura's documentation mentions "10-minute sampling" for general heart rate monitoring, the RHR metric in the Oura app is actually the single lowest heart rate value from the night's sleep data. This automation replicates this exact methodology, providing the timestamp when your body reached its most rested state during sleep.
 
 > [!NOTE]  
 > These are different mathematical approaches to HRV calculation. Oura values are typically higher and not directly comparable to Apple Watch readings. However, I think using Oura's consistent measurement over time provides superior insights into recovery patterns.
@@ -100,6 +112,7 @@ Your Health Apps
 
 ### 5. Apple Shortcuts Setup
 
+#### HRV Data Import
 Create a new Shortcut with these 8 actions:
 
 1. **Get Current Date** → Current date
@@ -116,11 +129,29 @@ Create a new Shortcut with these 8 actions:
    - **Date**: `Item from Repeat` → `date_readable`
    - **Source Name**: "Oura Ring"
 
-Set automation to run daily at 8:00 AM (or whatever time you prefer) with "Ask Before Running" OFF.
+#### RHR Data Import
+Create a second Shortcut with these 8 actions:
+
+1. **Get Current Date** → Current date
+2. **Format Date** → Custom format: `yyyy-MM-dd`
+3. **Text** → `https://raw.githubusercontent.com/yourusername/oura-hrv/main/data/[Formatted Date]_sleep-rhr.json`
+4. **Get Contents of URL** → Enable "Allow Untrusted Hosts"
+5. **If** → Contains "rhr" (error detection)
+6. **Get Dictionary from Input** → Parse JSON (inside If)
+7. **Repeat with Each** → Loop through entries (inside If)
+8. **Log Health Sample** → Settings:
+   - **Sample Type**: Resting Heart Rate
+   - **Quantity**: `Item from Repeat` → `rhr`
+   - **Unit**: Beats/Min
+   - **Date**: `Item from Repeat` → `date_readable`
+   - **Source Name**: "Oura Ring"
+
+Set both automations to run daily at 8:00 AM (or whatever time you prefer) with "Ask Before Running" OFF.
 
 ## 📊 Data Format
 
-Each night's data is saved as an individual JSON file (`YYYY-MM-DD_sleep-hrv.json`):
+### HRV Data
+Each night's HRV data is saved as `YYYY-MM-DD_sleep-hrv.json`:
 
 ```json
 [
@@ -137,12 +168,33 @@ Each night's data is saved as an individual JSON file (`YYYY-MM-DD_sleep-hrv.jso
 ]
 ```
 
+### RHR Data
+Each night's RHR data is saved as `YYYY-MM-DD_sleep-rhr.json`:
+
+```json
+[
+  {
+    "date": 1726789320,
+    "date_readable": "2025-09-20 03:42:00",
+    "timezone": "CDT",
+    "timezone_offset": "-0500", 
+    "rhr": 58,
+    "unit": "bpm",
+    "source": "oura_ring_sleep",
+    "measurement_type": "lowest_heart_rate"
+  }
+]
+```
+
 ### File Structure
 ```
 data/
 ├── 2025-09-18_sleep-hrv.json  # 87 HRV readings
+├── 2025-09-18_sleep-rhr.json  # 1 RHR measurement
 ├── 2025-09-19_sleep-hrv.json  # 92 HRV readings  
+├── 2025-09-19_sleep-rhr.json  # 1 RHR measurement
 └── 2025-09-20_sleep-hrv.json  # 84 HRV readings
+└── 2025-09-20_sleep-rhr.json  # 1 RHR measurement
 ```
 
 ## ⚙️ Automation Schedule
@@ -175,6 +227,7 @@ The system runs multiple times daily (using GitHub Actions) to ensure reliable d
 
 #### `data_processor.py` 
 - Extracts HRV time series from Oura sleep sessions
+- Extracts RHR with precise timing from sleep heart rate data
 - Filters invalid values (None, 0, negative readings)
 - Generates timezone-aware timestamps for travel
 - Creates individual files per night (prevents duplicates)
@@ -218,21 +271,22 @@ python main.py
 
 ## 🎯 Integration with Health Apps
 
-This automation makes detailed Oura HRV data available in Apple Health, where it can be used by any app that integrates with Apple Health HRV data:
+This automation makes detailed Oura HRV and RHR data available in Apple Health, where it can be used by any app that integrates with Apple Health data:
 
 ### Benefits for Health Apps
 - **High-frequency sleep HRV data** (vs single daily readings from most devices)
+- **Precise RHR timing** showing when your body reached its most rested state
 - **Consistent rMSSD measurements** throughout sleep  
 - **Automatic daily data availability** by 10-11 AM
 
 ### Compatible Apps
-Any app that uses Apple Health HRV data will benefit from this richer dataset:
+Any app that uses Apple Health HRV or RHR data will benefit from this richer dataset:
 - HRV4Training
 - EliteHRV  
 - Welltory
 - Bevel
 - Custom health dashboards
-- Any app using HealthKit HRV data
+- Any app using HealthKit HRV or heart rate data
 
 ## 🔍 Troubleshooting
 
@@ -259,13 +313,21 @@ The system automatically handles token refresh, but if you see persistent auth e
 2. Update the `OURA_REFRESH_TOKEN` secret
 3. The next automation run will self-correct
 
+### RHR Data Missing
+If RHR files aren't being created:
+- Verify that your sleep sessions include heart rate time series data
+- RHR is only created when heart rate intervals are available (some nights may not have this data)
+- Check the GitHub Actions logs for processing details
+
 ## 📈 Benefits Over Default Oura Integration
 
 | Feature | Oura App → Apple Health | This Automation |
 |---------|------------------------|-----------------|
 | HRV Frequency | None (no sync) | 80-96 readings/night |
-| Measurement Type | N/A | rMSSD (sleep-optimized) |
-| Data Richness | N/A | 5-minute intervals |
+| HRV Measurement Type | N/A | rMSSD (sleep-optimized) |
+| HRV Data Richness | N/A | 5-minute intervals |
+| RHR Sync | None (no sync) | Precise timing of lowest HR |
+| RHR Accuracy | N/A | Actual occurrence time during sleep |
 | Automation | Manual only | Fully automatic |
 | Travel Handling | N/A | Automatic timezone |
 | Historical Data | N/A | Complete archive |
