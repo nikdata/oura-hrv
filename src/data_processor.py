@@ -74,7 +74,7 @@ def save_nightly_hrv_files(sleep_data):
     return files_created
 
 def extract_rhr_data(sleep_data):
-    """Extract RHR (lowest_heart_rate) data for Apple Health"""
+    """Extract RHR (lowest_heart_rate) data for Apple Health with actual timestamp"""
     rhr_entries = []
     
     for night in sleep_data['data']:
@@ -82,21 +82,42 @@ def extract_rhr_data(sleep_data):
         night_date = night['day']  # Format: "2025-09-20"
         
         if lowest_hr is not None and lowest_hr > 0:
-            # Use the day as timestamp (midnight UTC for that date)
-            day_dt = datetime.strptime(night_date, "%Y-%m-%d")
-            unix_timestamp = int(day_dt.timestamp())
-            human_readable = day_dt.strftime("%Y-%m-%d %H:%M:%S")
+            # Find the actual time when lowest heart rate occurred
+            hr_data = night.get('heart_rate', {})
+            hr_items = hr_data.get('items', [])
+            hr_timestamp = hr_data.get('timestamp')
             
-            rhr_entries.append({
-                'date': unix_timestamp,
-                'date_readable': human_readable,
-                'timezone': 'UTC',
-                'timezone_offset': '+0000',
-                'rhr': lowest_hr,
-                'unit': 'bpm',
-                'source': 'oura_ring_sleep',
-                'measurement_type': 'lowest_heart_rate'
-            })
+            if hr_items and hr_timestamp:
+                # Parse the starting timestamp using only datetime, but keep timezone info
+                start_time_with_tz = datetime.fromisoformat(hr_timestamp.replace('Z', '+00:00'))
+                interval_seconds = int(hr_data.get('interval', 300))  # Default 5 minutes
+                
+                # Find index of lowest heart rate value (use last occurrence)
+                lowest_index = None
+                for i, hr_value in enumerate(hr_items):
+                    if hr_value == lowest_hr:
+                        lowest_index = i  # Keep updating to get the last occurrence
+                
+                if lowest_index is not None:
+                    # Calculate actual timestamp of lowest heart rate
+                    actual_time = start_time_with_tz + timedelta(seconds=lowest_index * interval_seconds)
+                    unix_timestamp = int(actual_time.timestamp())
+                    human_readable = actual_time.strftime("%Y-%m-%d %H:%M:%S")
+                    timezone_name = actual_time.strftime("%Z")
+                    timezone_offset = actual_time.strftime("%z")
+                    
+                    rhr_entries.append({
+                        'date': unix_timestamp,
+                        'date_readable': human_readable,
+                        'timezone': timezone_name,
+                        'timezone_offset': timezone_offset,
+                        'rhr': lowest_hr,
+                        'unit': 'bpm',
+                        'source': 'oura_ring_sleep',
+                        'measurement_type': 'lowest_heart_rate'
+                    })
+            # If no heart rate data exists, skip this night entirely
+            # (no point adding RHR without knowing when it occurred)
     
     return rhr_entries
 
