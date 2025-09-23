@@ -6,12 +6,17 @@ on:
   repository_dispatch:
     types: [oura-data-updated]
   
-  # Daily trigger at 9:45 AM Chicago time
-  # Chicago is UTC-6 (CST) or UTC-5 (CDT), so 9:45 AM Chicago = 14:45 UTC (CDT) or 15:45 UTC (CST)
-  # Using 14:45 UTC for Daylight Saving Time (March-November)
+  # run times
   schedule:
-    - cron: '*/20 10,11,12,13,14 * * *'  # run every 20 minutes in the morning (5 CDT - 9:45 CDT)
-    - cron: '0 16,17,18,19,20 * * *' # rerun on the hour starting at 11 am CDT
+    - cron: '50 10 * * *'    # 5:50 AM CDT; first run
+    - cron: '20 11 * * *'    # 6:20 AM CDT  
+    - cron: '40 11 * * *'    # 6:40 AM CDT
+    - cron: '03 12 * * *'    # 7:03 AM CDT
+    - cron: '20 12 * * *'    # 7:20 AM CDT
+    - cron: '40 12 * * *'    # 7:40 AM CDT
+    - cron: '10 13 * * *'    # 8:10 AM CDT
+    - cron: '50 13 * * *'    # 8:50 AM CDT
+    - cron: '10 20 * * *'    # 3:10 PM CDT; final run
   
   # Manual trigger for testing
   workflow_dispatch:
