@@ -187,24 +187,46 @@ Each night's RHR data is saved as `YYYY-MM-DD_sleep-rhr.json`:
 ```
 
 ### File Structure
+
+The repository automatically organizes data files into a hierarchical structure for better long-term management:
+
 ```
 data/
-├── 2025-09-18_sleep-hrv.json  # 87 HRV readings
-├── 2025-09-18_sleep-rhr.json  # 1 RHR measurement
-├── 2025-09-19_sleep-hrv.json  # 92 HRV readings  
-├── 2025-09-19_sleep-rhr.json  # 1 RHR measurement
-└── 2025-09-20_sleep-hrv.json  # 84 HRV readings
-└── 2025-09-20_sleep-rhr.json  # 1 RHR measurement
+├── hrv/
+│   └── 2025/
+│       ├── 09/
+│       │   ├── 2025-09-18_sleep-hrv.json  # 87 HRV readings
+│       │   ├── 2025-09-19_sleep-hrv.json  # 92 HRV readings
+│       │   └── 2025-09-20_sleep-hrv.json  # 84 HRV readings
+│       └── 10/
+│           └── 2025-10-24_sleep-hrv.json  # 96 HRV readings
+└── rhr/
+    └── 2025/
+        ├── 09/
+        │   ├── 2025-09-18_sleep-rhr.json  # 1 RHR measurement
+        │   ├── 2025-09-19_sleep-rhr.json  # 1 RHR measurement
+        │   └── 2025-09-20_sleep-rhr.json  # 1 RHR measurement
+        └── 10/
+            └── 2025-10-24_sleep-rhr.json  # 1 RHR measurement
 ```
+
+**Organization Details:**
+- Files are automatically organized daily at 10 PM CDT
+- Structure: `data/{metric}/{year}/{month}/YYYY-MM-DD_sleep-{metric}.json`
+- No duplicate handling needed - already-organized files are skipped
+- Apple Shortcuts continue to work with the raw GitHub URLs (organization is transparent to end users)
 
 ## ⚙️ Automation Schedule
 
-The system runs multiple times daily (using GitHub Actions) to ensure reliable data capture:
+The system runs multiple GitHub Actions workflows to ensure reliable data capture and organization:
+
+### Data Collection (process-hrv.yml)
+Multiple daily runs to capture sleep data:
 
 ```yaml
 # GitHub Actions Schedule (All times CDT)
 - 5:45 AM, 7:45 AM     # Early morning capture
-- 9:45 AM, 11:45 AM    # Standard processing window  
+- 9:45 AM, 11:45 AM    # Standard processing window
 - 1:45 PM, 3:45 PM     # Afternoon backup
 - 6:45 PM              # Evening final attempt
 ```
@@ -214,6 +236,16 @@ The system runs multiple times daily (using GitHub Actions) to ensure reliable d
 - Accommodates Oura's processing delays (2-8 hours post wake-up)
 - Prevents failures from complex sleep patterns or travel
 - Zero duplicates due to smart file-based deduplication
+
+### Data Organization (organize-data.yml)
+Daily cleanup at 10 PM CDT to maintain file structure:
+
+```yaml
+# Runs daily at 10:00 PM CDT (3:00 AM UTC)
+- Organizes data files into year/month folders
+- Only commits if files were actually moved
+- Keeps repository clean as data accumulates over months/years
+```
 
 ## 🔧 Key Components
 
@@ -225,7 +257,7 @@ The system runs multiple times daily (using GitHub Actions) to ensure reliable d
 - API request handling with 401 error recovery
 - Fetches sleep data with configurable date ranges
 
-#### `data_processor.py` 
+#### `data_processor.py`
 - Extracts HRV time series from Oura sleep sessions
 - Extracts RHR with precise timing from sleep heart rate data
 - Filters invalid values (None, 0, negative readings)
@@ -237,12 +269,25 @@ The system runs multiple times daily (using GitHub Actions) to ensure reliable d
 - Environment validation and error handling
 - Status reporting and logging
 
-### GitHub Actions Workflow
+#### `data_organizer.py`
+- Automatically organizes data files into hierarchical structure
+- Moves files from `data/` root into `data/{metric}/{year}/{month}/`
+- Pattern matching for `YYYY-MM-DD_sleep-{hrv|rhr}.json` files
+- Dry-run mode for testing (`--dry-run` flag)
+- Prevents duplicates and skips already-organized files
 
-- **File**: `.github/workflows/process-hrv.yml`
+### GitHub Actions Workflows
+
+#### Data Processing (`.github/workflows/process-hrv.yml`)
 - **Triggers**: Scheduled runs + manual triggers + webhook-ready
 - **Self-updating**: Manages its own OAuth token rotation
 - **Zero maintenance**: Fully autonomous operation
+
+#### Data Organization (`.github/workflows/organize-data.yml`)
+- **Triggers**: Daily at 10 PM CDT + manual workflow dispatch
+- **Function**: Organizes accumulated data files into year/month structure
+- **Smart commits**: Only commits when files are actually moved
+- **Scalability**: Keeps repository navigable as data grows over months/years
 
 ## 🛠️ Local Development & Testing
 
@@ -255,7 +300,7 @@ python debug-oura.py
 
 This provides detailed analysis of:
 - OAuth token status
-- Recent sleep sessions and HRV availability  
+- Recent sleep sessions and HRV availability
 - Data processing timing insights
 - API connectivity validation
 
@@ -267,6 +312,12 @@ pip install requests python-dotenv python-dateutil PyNaCl
 # Set up .env file with your tokens
 # Run the main pipeline
 python main.py
+
+# Test data organization (preview mode)
+python src/data_organizer.py --dry-run
+
+# Actually organize files
+python src/data_organizer.py
 ```
 
 ## 🎯 Integration with Health Apps
