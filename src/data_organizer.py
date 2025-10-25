@@ -104,22 +104,30 @@ def organize_files(dry_run=False):
         target_path = target_folder / filename
 
         # Check if file already exists at destination
-        if target_path.exists():
-            print(f"Already exists: {filename} in {metric_type}/{year}/{month}/")
-            already_exists_count += 1
-            continue
+        file_exists = target_path.exists()
 
         # Move the file (or just show what would happen)
         if dry_run:
-            print(f"[DRY RUN] Would move: {filename} -> {metric_type}/{year}/{month}/")
+            if file_exists:
+                print(f"[DRY RUN] Would overwrite: {filename} in {metric_type}/{year}/{month}/")
+            else:
+                print(f"[DRY RUN] Would move: {filename} -> {metric_type}/{year}/{month}/")
             moved_count += 1
         else:
             # Create the folder if it doesn't exist yet
             target_folder.mkdir(parents=True, exist_ok=True)
 
+            # Remove existing file if present (shutil.move overwrites, but let's be explicit)
+            if file_exists:
+                target_path.unlink()
+
             # Actually move the file
             shutil.move(str(file_path), str(target_path))
-            print(f"Moved: {filename} -> {metric_type}/{year}/{month}/")
+
+            if file_exists:
+                print(f"Moved & overwrote: {filename} in {metric_type}/{year}/{month}/")
+            else:
+                print(f"Moved: {filename} -> {metric_type}/{year}/{month}/")
             moved_count += 1
 
     # Print summary of what was done
