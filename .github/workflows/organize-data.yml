@@ -1,0 +1,57 @@
+# .github/workflows/organize-data.yml
+name: Organize Data Files
+
+on:
+  # Scheduled run at 10 PM CDT (03:00 UTC during CDT)
+  # Note: When DST ends and CDT becomes CST, this will run at 9 PM CST
+  # To keep it at 10 PM year-round, you'd need to adjust to '0 4 * * *' in winter
+  schedule:
+    - cron: '0 3 * * *'    # 10 PM CDT
+
+  # Manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  organize-data:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Organize data files
+      run: |
+        python src/data_organizer.py
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+        # Add all changes in the data directory
+        git add data/
+
+        # Only commit if there are changes
+        if git diff --staged --quiet; then
+          echo "ℹ️ No files to organize - everything already in place"
+        else
+          git commit -m "Organize data files - $(date -u +"%Y-%m-%d %H:%M UTC")"
+          git push
+          echo "✅ Data organization complete"
+        fi
+
+    - name: Log completion
+      run: |
+        echo "Data organization completed at $(date -u)"
+        echo "Current data structure:"
+        ls -la data/ 2>/dev/null || echo "No data directory found"
+        ls -la data/hrv/ 2>/dev/null || echo "No hrv directory yet"
+        ls -la data/rhr/ 2>/dev/null || echo "No rhr directory yet"
