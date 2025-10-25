@@ -23,7 +23,7 @@ def main():
         raise ValueError(f"Missing required environment variables: {missing_vars}")
     
     try:
-        # Get recent sleep data (last 3 days to catch any missed data)
+        # Get recent sleep data (last days_to_get days to catch any missed data)
         print("Fetching recent sleep HRV data from Oura...")
         sleep_data = get_recent_sleep_hrv(days=days_to_get)
         
