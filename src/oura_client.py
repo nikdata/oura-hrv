@@ -45,16 +45,61 @@ def refresh_access_token():
     """Refresh tokens and update GitHub secrets automatically"""
     url = "https://api.ouraring.com/oauth/token"
     
+    refresh_token = os.getenv("OURA_REFRESH_TOKEN")
+    client_id = os.getenv("OURA_CLIENT_ID")
+    client_secret = os.getenv("OURA_CLIENT_SECRET")
+    
+    # Validate we have all required credentials
+    if not refresh_token:
+        raise ValueError("OURA_REFRESH_TOKEN is missing from environment variables")
+    if not client_id:
+        raise ValueError("OURA_CLIENT_ID is missing from environment variables")
+    if not client_secret:
+        raise ValueError("OURA_CLIENT_SECRET is missing from environment variables")
+    
     data = {
         "grant_type": "refresh_token",
-        "refresh_token": os.getenv("OURA_REFRESH_TOKEN"),
-        "client_id": os.getenv("OURA_CLIENT_ID"),
-        "client_secret": os.getenv("OURA_CLIENT_SECRET")
+        "refresh_token": refresh_token,
+        "client_id": client_id,
+        "client_secret": client_secret
     }
     
-    response = requests.post(url, data=data)
-    response.raise_for_status()
-    tokens = response.json()
+    try:
+        response = requests.post(url, data=data)
+        response.raise_for_status()
+        tokens = response.json()
+    except requests.exceptions.HTTPError as e:
+        # Get detailed error information from Oura API
+        error_details = ""
+        try:
+            error_body = response.json()
+            error_details = f"\nOura API Error: {error_body}"
+        except:
+            error_details = f"\nResponse Text: {response.text}"
+        
+        # Provide specific guidance based on status code
+        if response.status_code == 400:
+            raise RuntimeError(
+                f"❌ OAuth token refresh failed with 400 Bad Request{error_details}\n\n"
+                "This usually means your refresh token is invalid or expired.\n"
+                "To fix this, you need to re-authorize the application:\n\n"
+                "1. Run the OAuth flow locally to get a new refresh token\n"
+                "2. Update the OURA_REFRESH_TOKEN secret in GitHub\n"
+                "3. See project documentation for detailed OAuth setup steps\n\n"
+                f"Current refresh token (first 10 chars): {refresh_token[:10]}..."
+            ) from e
+        elif response.status_code == 401:
+            raise RuntimeError(
+                f"❌ OAuth token refresh failed with 401 Unauthorized{error_details}\n\n"
+                "This usually means your client credentials are incorrect.\n"
+                "Verify these GitHub Secrets are correct:\n"
+                "- OURA_CLIENT_ID\n"
+                "- OURA_CLIENT_SECRET"
+            ) from e
+        else:
+            raise RuntimeError(
+                f"❌ OAuth token refresh failed with status {response.status_code}{error_details}"
+            ) from e
     
     # Update environment for current session
     new_access_token = tokens['access_token']
