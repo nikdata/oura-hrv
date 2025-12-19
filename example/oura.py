@@ -129,7 +129,7 @@ print(auth_url)
 
 # Step 2: After visiting URL and getting redirected, extract the 'code' parameter
 # This authorization code can be found in the URL after authorizing app
-authorization_code = "VDONIQJE4SGI7A54WOSMP7QIEK3IC2JH"
+authorization_code = "ES56FAEVS2HHALYJMRCSID3TUZ5OFPOS"
 
 # Step 3: Exchange code for tokens
 tokens = exchange_code_for_tokens(authorization_code)
