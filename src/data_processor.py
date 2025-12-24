@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-import dateutil.parser
+# import dateutil.parser
 
 def extract_hrv_timeseries(sleep_data):
     """Extract time series HRV data for Apple Health"""
