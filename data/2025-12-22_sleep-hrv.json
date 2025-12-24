@@ -2,7 +2,7 @@
   {
     "date": 1766375851,
     "date_readable": "2025-12-21 21:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 43.0,
     "unit": "ms",
@@ -12,7 +12,7 @@
   {
     "date": 1766376151,
     "date_readable": "2025-12-21 22:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 36.0,
     "unit": "ms",
@@ -22,7 +22,7 @@
   {
     "date": 1766376451,
     "date_readable": "2025-12-21 22:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -32,7 +32,7 @@
   {
     "date": 1766376751,
     "date_readable": "2025-12-21 22:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 33.0,
     "unit": "ms",
@@ -42,7 +42,7 @@
   {
     "date": 1766377051,
     "date_readable": "2025-12-21 22:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 36.0,
     "unit": "ms",
@@ -52,7 +52,7 @@
   {
     "date": 1766377351,
     "date_readable": "2025-12-21 22:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 21.0,
     "unit": "ms",
@@ -62,7 +62,7 @@
   {
     "date": 1766377651,
     "date_readable": "2025-12-21 22:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 31.0,
     "unit": "ms",
@@ -72,7 +72,7 @@
   {
     "date": 1766377951,
     "date_readable": "2025-12-21 22:32:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 23.0,
     "unit": "ms",
@@ -82,7 +82,7 @@
   {
     "date": 1766378251,
     "date_readable": "2025-12-21 22:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 33.0,
     "unit": "ms",
@@ -92,7 +92,7 @@
   {
     "date": 1766378551,
     "date_readable": "2025-12-21 22:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 38.0,
     "unit": "ms",
@@ -102,7 +102,7 @@
   {
     "date": 1766378851,
     "date_readable": "2025-12-21 22:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 34.0,
     "unit": "ms",
@@ -112,7 +112,7 @@
   {
     "date": 1766379151,
     "date_readable": "2025-12-21 22:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 50.0,
     "unit": "ms",
@@ -122,7 +122,7 @@
   {
     "date": 1766379451,
     "date_readable": "2025-12-21 22:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 48.0,
     "unit": "ms",
@@ -132,7 +132,7 @@
   {
     "date": 1766379751,
     "date_readable": "2025-12-21 23:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 32.0,
     "unit": "ms",
@@ -142,7 +142,7 @@
   {
     "date": 1766380051,
     "date_readable": "2025-12-21 23:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 34.0,
     "unit": "ms",
@@ -152,7 +152,7 @@
   {
     "date": 1766380351,
     "date_readable": "2025-12-21 23:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 32.0,
     "unit": "ms",
@@ -162,7 +162,7 @@
   {
     "date": 1766380651,
     "date_readable": "2025-12-21 23:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 37.0,
     "unit": "ms",
@@ -172,7 +172,7 @@
   {
     "date": 1766380951,
     "date_readable": "2025-12-21 23:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 33.0,
     "unit": "ms",
@@ -182,7 +182,7 @@
   {
     "date": 1766381251,
     "date_readable": "2025-12-21 23:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -192,7 +192,7 @@
   {
     "date": 1766381551,
     "date_readable": "2025-12-21 23:32:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -202,7 +202,7 @@
   {
     "date": 1766381851,
     "date_readable": "2025-12-21 23:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 31.0,
     "unit": "ms",
@@ -212,7 +212,7 @@
   {
     "date": 1766382151,
     "date_readable": "2025-12-21 23:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 31.0,
     "unit": "ms",
@@ -222,7 +222,7 @@
   {
     "date": 1766382451,
     "date_readable": "2025-12-21 23:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 39.0,
     "unit": "ms",
@@ -232,7 +232,7 @@
   {
     "date": 1766382751,
     "date_readable": "2025-12-21 23:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 32.0,
     "unit": "ms",
@@ -242,7 +242,7 @@
   {
     "date": 1766384851,
     "date_readable": "2025-12-22 00:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 24.0,
     "unit": "ms",
@@ -252,7 +252,7 @@
   {
     "date": 1766385151,
     "date_readable": "2025-12-22 00:32:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 23.0,
     "unit": "ms",
@@ -262,7 +262,7 @@
   {
     "date": 1766385451,
     "date_readable": "2025-12-22 00:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 20.0,
     "unit": "ms",
@@ -272,7 +272,7 @@
   {
     "date": 1766385751,
     "date_readable": "2025-12-22 00:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 32.0,
     "unit": "ms",
@@ -282,7 +282,7 @@
   {
     "date": 1766386051,
     "date_readable": "2025-12-22 00:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 26.0,
     "unit": "ms",
@@ -292,7 +292,7 @@
   {
     "date": 1766386351,
     "date_readable": "2025-12-22 00:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -302,7 +302,7 @@
   {
     "date": 1766386651,
     "date_readable": "2025-12-22 00:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 59.0,
     "unit": "ms",
@@ -312,7 +312,7 @@
   {
     "date": 1766386951,
     "date_readable": "2025-12-22 01:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 23.0,
     "unit": "ms",
@@ -322,7 +322,7 @@
   {
     "date": 1766387251,
     "date_readable": "2025-12-22 01:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 39.0,
     "unit": "ms",
@@ -332,7 +332,7 @@
   {
     "date": 1766387551,
     "date_readable": "2025-12-22 01:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 26.0,
     "unit": "ms",
@@ -342,7 +342,7 @@
   {
     "date": 1766387851,
     "date_readable": "2025-12-22 01:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 37.0,
     "unit": "ms",
@@ -352,7 +352,7 @@
   {
     "date": 1766388151,
     "date_readable": "2025-12-22 01:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 45.0,
     "unit": "ms",
@@ -362,7 +362,7 @@
   {
     "date": 1766388451,
     "date_readable": "2025-12-22 01:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 40.0,
     "unit": "ms",
@@ -372,7 +372,7 @@
   {
     "date": 1766389051,
     "date_readable": "2025-12-22 01:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 25.0,
     "unit": "ms",
@@ -382,7 +382,7 @@
   {
     "date": 1766389351,
     "date_readable": "2025-12-22 01:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -392,7 +392,7 @@
   {
     "date": 1766389651,
     "date_readable": "2025-12-22 01:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -402,7 +402,7 @@
   {
     "date": 1766390551,
     "date_readable": "2025-12-22 02:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 33.0,
     "unit": "ms",
@@ -412,7 +412,7 @@
   {
     "date": 1766390851,
     "date_readable": "2025-12-22 02:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 18.0,
     "unit": "ms",
@@ -422,7 +422,7 @@
   {
     "date": 1766392951,
     "date_readable": "2025-12-22 02:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 33.0,
     "unit": "ms",
@@ -432,7 +432,7 @@
   {
     "date": 1766393251,
     "date_readable": "2025-12-22 02:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 22.0,
     "unit": "ms",
@@ -442,7 +442,7 @@
   {
     "date": 1766393851,
     "date_readable": "2025-12-22 02:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 36.0,
     "unit": "ms",
@@ -452,7 +452,7 @@
   {
     "date": 1766395051,
     "date_readable": "2025-12-22 03:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 36.0,
     "unit": "ms",
@@ -462,7 +462,7 @@
   {
     "date": 1766395351,
     "date_readable": "2025-12-22 03:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 30.0,
     "unit": "ms",
@@ -472,7 +472,7 @@
   {
     "date": 1766395651,
     "date_readable": "2025-12-22 03:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 26.0,
     "unit": "ms",
@@ -482,7 +482,7 @@
   {
     "date": 1766396551,
     "date_readable": "2025-12-22 03:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 39.0,
     "unit": "ms",
@@ -492,7 +492,7 @@
   {
     "date": 1766396851,
     "date_readable": "2025-12-22 03:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 36.0,
     "unit": "ms",
@@ -502,7 +502,7 @@
   {
     "date": 1766397151,
     "date_readable": "2025-12-22 03:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -512,7 +512,7 @@
   {
     "date": 1766397451,
     "date_readable": "2025-12-22 03:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 32.0,
     "unit": "ms",
@@ -522,7 +522,7 @@
   {
     "date": 1766397751,
     "date_readable": "2025-12-22 04:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 35.0,
     "unit": "ms",
@@ -532,7 +532,7 @@
   {
     "date": 1766398051,
     "date_readable": "2025-12-22 04:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 30.0,
     "unit": "ms",
@@ -542,7 +542,7 @@
   {
     "date": 1766398351,
     "date_readable": "2025-12-22 04:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 23.0,
     "unit": "ms",
@@ -552,7 +552,7 @@
   {
     "date": 1766398651,
     "date_readable": "2025-12-22 04:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 27.0,
     "unit": "ms",
@@ -562,7 +562,7 @@
   {
     "date": 1766398951,
     "date_readable": "2025-12-22 04:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
@@ -572,7 +572,7 @@
   {
     "date": 1766399251,
     "date_readable": "2025-12-22 04:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -582,7 +582,7 @@
   {
     "date": 1766399551,
     "date_readable": "2025-12-22 04:32:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -592,7 +592,7 @@
   {
     "date": 1766399851,
     "date_readable": "2025-12-22 04:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -602,7 +602,7 @@
   {
     "date": 1766400151,
     "date_readable": "2025-12-22 04:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 21.0,
     "unit": "ms",
@@ -612,7 +612,7 @@
   {
     "date": 1766400451,
     "date_readable": "2025-12-22 04:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 23.0,
     "unit": "ms",
@@ -622,7 +622,7 @@
   {
     "date": 1766400751,
     "date_readable": "2025-12-22 04:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 16.0,
     "unit": "ms",
@@ -632,7 +632,7 @@
   {
     "date": 1766401051,
     "date_readable": "2025-12-22 04:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 26.0,
     "unit": "ms",
@@ -642,7 +642,7 @@
   {
     "date": 1766401351,
     "date_readable": "2025-12-22 05:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 26.0,
     "unit": "ms",
@@ -652,7 +652,7 @@
   {
     "date": 1766401651,
     "date_readable": "2025-12-22 05:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 28.0,
     "unit": "ms",
@@ -662,7 +662,7 @@
   {
     "date": 1766401951,
     "date_readable": "2025-12-22 05:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 34.0,
     "unit": "ms",
@@ -672,7 +672,7 @@
   {
     "date": 1766402251,
     "date_readable": "2025-12-22 05:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 31.0,
     "unit": "ms",
@@ -682,7 +682,7 @@
   {
     "date": 1766402551,
     "date_readable": "2025-12-22 05:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 16.0,
     "unit": "ms",
@@ -692,7 +692,7 @@
   {
     "date": 1766402851,
     "date_readable": "2025-12-22 05:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 16.0,
     "unit": "ms",
@@ -702,7 +702,7 @@
   {
     "date": 1766403151,
     "date_readable": "2025-12-22 05:32:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 15.0,
     "unit": "ms",
@@ -712,7 +712,7 @@
   {
     "date": 1766403451,
     "date_readable": "2025-12-22 05:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 14.0,
     "unit": "ms",
@@ -722,7 +722,7 @@
   {
     "date": 1766403751,
     "date_readable": "2025-12-22 05:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 16.0,
     "unit": "ms",
@@ -732,7 +732,7 @@
   {
     "date": 1766404051,
     "date_readable": "2025-12-22 05:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 24.0,
     "unit": "ms",
@@ -742,7 +742,7 @@
   {
     "date": 1766404351,
     "date_readable": "2025-12-22 05:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 25.0,
     "unit": "ms",
@@ -752,7 +752,7 @@
   {
     "date": 1766404651,
     "date_readable": "2025-12-22 05:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -762,7 +762,7 @@
   {
     "date": 1766404951,
     "date_readable": "2025-12-22 06:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 21.0,
     "unit": "ms",
@@ -772,7 +772,7 @@
   {
     "date": 1766405251,
     "date_readable": "2025-12-22 06:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 25.0,
     "unit": "ms",
@@ -782,7 +782,7 @@
   {
     "date": 1766405551,
     "date_readable": "2025-12-22 06:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 17.0,
     "unit": "ms",
@@ -792,7 +792,7 @@
   {
     "date": 1766405851,
     "date_readable": "2025-12-22 06:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 20.0,
     "unit": "ms",
@@ -802,7 +802,7 @@
   {
     "date": 1766406151,
     "date_readable": "2025-12-22 06:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 24.0,
     "unit": "ms",
@@ -812,7 +812,7 @@
   {
     "date": 1766406451,
     "date_readable": "2025-12-22 06:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 31.0,
     "unit": "ms",
@@ -822,7 +822,7 @@
   {
     "date": 1766406751,
     "date_readable": "2025-12-22 06:32:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 25.0,
     "unit": "ms",
@@ -832,7 +832,7 @@
   {
     "date": 1766407051,
     "date_readable": "2025-12-22 06:37:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 28.0,
     "unit": "ms",
@@ -842,7 +842,7 @@
   {
     "date": 1766407351,
     "date_readable": "2025-12-22 06:42:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 27.0,
     "unit": "ms",
@@ -852,7 +852,7 @@
   {
     "date": 1766407651,
     "date_readable": "2025-12-22 06:47:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 20.0,
     "unit": "ms",
@@ -862,7 +862,7 @@
   {
     "date": 1766407951,
     "date_readable": "2025-12-22 06:52:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -872,7 +872,7 @@
   {
     "date": 1766408251,
     "date_readable": "2025-12-22 06:57:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 25.0,
     "unit": "ms",
@@ -882,7 +882,7 @@
   {
     "date": 1766408551,
     "date_readable": "2025-12-22 07:02:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 19.0,
     "unit": "ms",
@@ -892,7 +892,7 @@
   {
     "date": 1766408851,
     "date_readable": "2025-12-22 07:07:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 24.0,
     "unit": "ms",
@@ -902,7 +902,7 @@
   {
     "date": 1766409151,
     "date_readable": "2025-12-22 07:12:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 35.0,
     "unit": "ms",
@@ -912,7 +912,7 @@
   {
     "date": 1766409451,
     "date_readable": "2025-12-22 07:17:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 44.0,
     "unit": "ms",
@@ -922,7 +922,7 @@
   {
     "date": 1766409751,
     "date_readable": "2025-12-22 07:22:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 39.0,
     "unit": "ms",
@@ -932,7 +932,7 @@
   {
     "date": 1766410051,
     "date_readable": "2025-12-22 07:27:31",
-    "timezone": "",
+    "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
     "hrv": 29.0,
     "unit": "ms",
