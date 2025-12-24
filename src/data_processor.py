@@ -10,7 +10,8 @@ def extract_hrv_timeseries(sleep_data):
     for night in sleep_data['data']:
         if night['hrv'] and night['hrv']['items']:
             # Parse the starting timestamp
-            start_time = dateutil.parser.parse(night['hrv']['timestamp'])
+            # start_time = dateutil.parser.parse(night['hrv']['timestamp'])
+            start_time = datetime.fromisoformat(night['hrv']['timestamp'].replace('Z', '+00:00'))
             interval_seconds = int(night['hrv']['interval'])  # 300 seconds = 5 minutes
             
             # Process each HRV reading
