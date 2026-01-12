@@ -1,10 +1,10 @@
 [
   {
-    "date": 1768189681,
-    "date_readable": "2026-01-11 21:48:01",
+    "date": 1768213982,
+    "date_readable": "2026-01-12 04:33:02",
     "timezone": "UTC-06:00",
     "timezone_offset": "-0600",
-    "rhr": 70,
+    "rhr": 64,
     "unit": "bpm",
     "source": "oura_ring_sleep",
     "measurement_type": "lowest_heart_rate"
