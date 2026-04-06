@@ -157,6 +157,12 @@ def make_api_request(endpoint, auto_refresh=True):
         headers["Authorization"] = f"Bearer {new_token}"
         response = requests.get(url, headers=headers)
     
+    if response.status_code == 503:
+        raise RuntimeError(
+            "❌ Oura API returned 503 Service Unavailable.\n"
+            "The Oura API is temporarily down or overloaded. This is a transient server-side issue.\n"
+            "The workflow will need to be re-run once the API recovers."
+        )
     response.raise_for_status()
     return response.json()
 
