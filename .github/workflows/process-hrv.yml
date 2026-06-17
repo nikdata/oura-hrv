@@ -7,15 +7,15 @@ on:
     types: [oura-data-updated]
   
   # run times
-  schedule:
-    - cron: '03 11 * * *'    # 6:03 AM CDT
-    - cron: '20 11 * * *'    # 6:11 AM CDT
-    - cron: '40 11 * * *'    # 6:40 AM CDT
-    - cron: '03 12 * * *'    # 7:03 AM CDT
-    - cron: '20 12 * * *'    # 7:20 AM CDT
-    - cron: '40 12 * * *'    # 7:40 AM CDT
-    - cron: '20 13 * * *'    # 8:20 AM CDT
-    - cron: '10 19 * * *'    # 2:10 PM CDT; final run
+  # schedule:
+  #   - cron: '03 11 * * *'    # 6:03 AM CDT
+  #   - cron: '20 11 * * *'    # 6:11 AM CDT
+  #   - cron: '40 11 * * *'    # 6:40 AM CDT
+  #   - cron: '03 12 * * *'    # 7:03 AM CDT
+  #   - cron: '20 12 * * *'    # 7:20 AM CDT
+  #   - cron: '40 12 * * *'    # 7:40 AM CDT
+  #   - cron: '20 13 * * *'    # 8:20 AM CDT
+  #   - cron: '10 19 * * *'    # 2:10 PM CDT; final run
   
   # Manual trigger for testing
   workflow_dispatch:
