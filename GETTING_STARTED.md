@@ -2,6 +2,8 @@
 
 A plain-language guide to every piece of this project, written for someone who knows what Azure services are but hasn't built an Azure Functions app before.
 
+For day-to-day operations (checking logs, health checks, troubleshooting), see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
 ---
 
 ## Table of Contents
@@ -17,8 +19,6 @@ A plain-language guide to every piece of this project, written for someone who k
 - [The Infrastructure (Bicep)](#the-infrastructure-bicep)
 - [Scripts — What Each One Does](#scripts--what-each-one-does)
 - [Local Development](#local-development)
-- [Common Tasks](#common-tasks)
-- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -97,6 +97,7 @@ oura-hrv/
 │   └── security.py              # HMAC signature verification
 │
 ├── scripts/                     # One-off or utility scripts you run locally
+│   ├── check_health.py          # Pipeline health check — checks everything, tells you what to fix
 │   ├── oauth_bootstrap.py       # First-time OAuth setup (stores tokens in Key Vault)
 │   ├── create_subscription.py   # Registers webhook subscriptions with Oura
 │   ├── fill_missing.py          # Backfills a single missing date
@@ -121,6 +122,7 @@ oura-hrv/
 ├── requirements.txt             # Dependencies for Azure deployment (generated from uv)
 ├── README.md                    # Project overview and setup instructions
 ├── GETTING_STARTED.md           # This file
+├── TROUBLESHOOTING.md                # Health checks, logs, troubleshooting
 └── gameplan.md                  # Original design document / decision log
 ```
 
@@ -232,7 +234,7 @@ The `oura-data` container has **public blob-level read access**, meaning anyone 
 
 ### Application Insights
 
-Azure's monitoring/logging service. When your Function runs, logs go to Application Insights. You can view them in the Azure Portal under the Function App's "Monitor" section, or in the Application Insights resource directly.
+Azure's monitoring/logging service. When your Function runs, logs go to Application Insights. You can view them in the Azure Portal or query them — see [TROUBLESHOOTING.md — How to Check Function Logs](TROUBLESHOOTING.md#how-to-check-function-logs) for step-by-step instructions.
 
 **Cost warning**: Application Insights charges by data volume. For a project this small, the cost is negligible, but the Bicep template enables sampling to prevent surprises.
 
@@ -252,7 +254,7 @@ How it works:
 - We send the access token as `Authorization: Bearer <token>` header
 - If Oura returns a new refresh token, we save it back to Key Vault
 
-This is the standard OAuth2 refresh-token flow. The access token expires quickly (typically ~24 hours), but the refresh token lasts longer and can be reused.
+This is the standard OAuth2 refresh-token flow. The access token expires quickly (typically ~24 hours), but the refresh token lasts longer and can be reused. When the refresh token eventually dies, see [TROUBLESHOOTING.md — Oura Token Expiry](TROUBLESHOOTING.md#oura-token-expiry).
 
 ### 2. Client Credentials (for Oura webhook management)
 
@@ -312,9 +314,27 @@ The Bicep template also configures app settings on the Function App (environment
 
 All scripts in `scripts/` are run locally on your machine (not in Azure). They help with setup, maintenance, and debugging.
 
+### `check_health.py` — Pipeline health check
+
+**When to run:** Anytime you want to know if things are working, or if your Apple Shortcut isn't finding data. This is the first thing to run when something seems off.
+
+**What it does:**
+1. Checks that your `.env` has the required variables
+2. Looks in blob storage for recent HRV/RHR files (defaults to last 2 days)
+3. Validates that the Oura OAuth token is still valid
+4. Confirms webhook subscriptions are active and not expired
+5. Tests connectivity to the Oura API
+
+For every problem found, it prints what's wrong and the exact command to fix it. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#the-health-check-script) for example output and more details.
+
+```bash
+python scripts/check_health.py          # quick check (last 2 days)
+python scripts/check_health.py --days 7 # check the last week
+```
+
 ### `oauth_bootstrap.py` — First-time setup + re-authorization
 
-**When to run:** Once during initial setup, and again whenever the Oura token chain dies (you'll see `invalid_grant` in the Function logs).
+**When to run:** Once during initial setup, and again whenever the Oura token chain dies (the health check will tell you).
 
 **What it does:**
 1. Opens your browser to Oura's authorization page
@@ -427,82 +447,3 @@ python scripts/test_local.py
 ```
 
 This fetches real data from Oura and writes processed JSON to `test_output/`.
-
----
-
-## Common Tasks
-
-### Deploying to Azure
-
-```bash
-# 1. Generate requirements.txt from uv (Azure needs this for pip install)
-uv export --no-hashes > requirements.txt
-
-# 2. Deploy the Function App
-func azure functionapp publish ourahrv-func
-```
-
-### Checking if webhooks are working
-
-Look at the Function App logs in the Azure Portal:
-1. Go to your Function App → Monitor → Invocations
-2. Or go to Application Insights → Logs and run:
-   ```
-   traces | where message contains "Processing sleep" | order by timestamp desc
-   ```
-
-### Re-authorizing after token expiry
-
-When you see `invalid_grant` in the logs:
-
-```bash
-python scripts/oauth_bootstrap.py \
-  --vault-uri https://ourahrv-kv.vault.azure.net/ \
-  --client-id <your-client-id> \
-  --client-secret <your-client-secret>
-```
-
-### Backfilling a missed date
-
-```bash
-python scripts/fill_missing.py 2026-08-19
-```
-
-### Checking webhook subscription status
-
-```bash
-# From the Azure Portal → Function App → Monitor
-# Look for "Renewed subscription" or "No webhook subscriptions found" in logs
-```
-
----
-
-## Troubleshooting
-
-### "No webhook subscriptions found"
-
-The daily renewal timer didn't find any subscriptions. They may have expired. Re-run `scripts/create_subscription.py`.
-
-### "HMAC verification failed"
-
-Either:
-- Someone is hitting your webhook URL with fake requests (normal, ignore)
-- The client secret in Key Vault doesn't match the one registered with Oura (re-run `oauth_bootstrap.py`)
-
-### "invalid_grant" in logs
-
-The Oura refresh token has expired or been revoked. Re-run `oauth_bootstrap.py` to get a fresh one.
-
-### "No valid HRV data for {date}"
-
-Oura's sleep document for that date didn't contain usable HRV data. This can happen with very short sleep sessions or naps. Usually resolves with the next `sleep/update` event.
-
-### Cold start delays
-
-The first webhook after a period of inactivity may take a few extra seconds (Azure is spinning up a container). This is normal and expected on the Consumption plan. Oura's webhook delivery is async and tolerates this delay.
-
-### Apple Shortcut not finding data
-
-1. Check that the blob exists: visit `https://ourahrvstore.blob.core.windows.net/oura-data/hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json` in a browser
-2. If it doesn't exist, the webhook may not have fired — check Function logs or run `fill_missing.py`
-3. If it exists but the Shortcut fails, verify the base URL in the Shortcut matches the blob URL

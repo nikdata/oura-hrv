@@ -4,7 +4,9 @@ Transfers detailed Heart Rate Variability (HRV) time series and Resting Heart Ra
 
 **How it works:** Oura sends a webhook ~30s after your ring syncs. An Azure Function receives it, fetches the sleep document, extracts HRV + RHR, and writes the JSON to Azure Blob Storage. Your Apple Shortcut reads the blob and logs the data into Apple Health.
 
-> **New to this project?** See [GETTING_STARTED.md](GETTING_STARTED.md) for a plain-language explanation of every component, Azure Functions basics, and how all the pieces fit together.
+> **New to this project?** Start with these guides:
+> - [GETTING_STARTED.md](GETTING_STARTED.md) — How everything works (Azure Functions basics, architecture, what every file does)
+> - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — Health checks, checking logs, troubleshooting, and fixing common problems
 
 ## Technical Background
 
@@ -141,6 +143,21 @@ https://ourahrvstore.blob.core.windows.net/oura-data/rhr/{year}/{month}/{date}_s
 
 The path structure (`YYYY/MM/YYYY-MM-DD_sleep-{metric}.json`) and JSON format are unchanged — only the base URL is different. Everything downstream in the Shortcut (Get Dictionary, Repeat, Log Health Sample) stays the same.
 
+## Health Check
+
+Run the diagnostic script to verify the entire pipeline is working:
+
+```bash
+python scripts/check_health.py          # check today + yesterday
+python scripts/check_health.py --days 7 # check the last week
+```
+
+This checks blob storage for recent data, validates Oura tokens, confirms webhook subscriptions are active, and tests API connectivity. If anything is wrong, it tells you exactly what to fix and how.
+
+Requires `az login` and a `.env` with `OURA_CLIENT_ID`, `KEY_VAULT_URI`, and `BLOB_ACCOUNT_URL`.
+
+For more on reading logs, checking token status, and troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
 ## Filling Missing Data
 
 If a webhook was missed (e.g. phone didn't sync in time), you can backfill a single date:
@@ -159,7 +176,7 @@ For bulk backfills across a date range, use `scripts/backfill.py` instead.
 
 ## Re-authorization
 
-Oura refresh tokens eventually expire. When this happens, the Function logs `invalid_grant` — run the bootstrap script again:
+Oura refresh tokens eventually expire. When this happens, the health check will report `invalid_grant` — or you can check the Function logs (see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#how-to-check-function-logs)). Run the bootstrap script again:
 
 ```bash
 python scripts/oauth_bootstrap.py \
@@ -167,6 +184,8 @@ python scripts/oauth_bootstrap.py \
   --client-id <oura-client-id> \
   --client-secret <oura-client-secret>
 ```
+
+See [TROUBLESHOOTING.md — Token Expiry](TROUBLESHOOTING.md#oura-token-expiry) for more details on how to tell when this happens and what's going on under the hood.
 
 ## Data Format
 
@@ -230,5 +249,6 @@ func start
 
 ## Further Reading
 
-- [GETTING_STARTED.md](GETTING_STARTED.md) — Detailed walkthrough of every component, Azure Functions concepts, authentication flows, and troubleshooting
+- [GETTING_STARTED.md](GETTING_STARTED.md) — Detailed walkthrough of every component, Azure Functions concepts, authentication flows, and how all the pieces fit together
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — Health checks, reading function logs, Oura token expiry, and troubleshooting
 - [gameplan.md](gameplan.md) — Original design document with decision rationale
