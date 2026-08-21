@@ -47,9 +47,9 @@ def exchange_code_for_tokens(authorization_code):
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET
     }
-    
+
     response = requests.post(TOKEN_URL, data=data)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -60,16 +60,16 @@ def exchange_code_for_tokens(authorization_code):
 def refresh_access_token():
     """Use refresh token to get a new access token"""
     refresh_token = os.getenv("OURA_REFRESH_TOKEN")
-    
+
     data = {
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET
     }
-    
+
     response = requests.post(TOKEN_URL, data=data)
-    
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -86,15 +86,15 @@ def save_tokens_to_env(token_data):
 def make_api_request(endpoint):
     """Make authenticated request to Oura API"""
     access_token = os.getenv("OURA_ACCESS_TOKEN")
-    
+
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
     }
-    
+
     url = f"{API_BASE_URL}/{endpoint}"
     response = requests.get(url, headers=headers)
-    
+
     if response.status_code == 200:
         return response.json()
     else:

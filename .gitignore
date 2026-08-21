@@ -1,2 +1,17 @@
 .DS_Store
 .env
+__pycache__/
+*.pyc
+
+# Azure Functions
+local.settings.json
+.python_packages/
+.venv/
+.funcignore
+
+# uv
+.uv/
+
+# Data (kept in Blob Storage, not git)
+data/
+test_output/

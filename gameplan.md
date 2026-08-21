@@ -2,7 +2,8 @@
 
 **Audience:** Claude Code, working in the `nikdata/oura-hrv` repo.
 **Author:** Handoff from planning session. Read this whole file before writing code.
-**Last updated:** 2026-08-19
+**Last updated:** 2026-08-21
+**Status:** Complete — all steps implemented and working in production.
 
 ---
 
@@ -210,18 +211,18 @@ Provision via **Bicep** in `infra/` (or an `az` CLI script if Bicep is overkill)
 
 ---
 
-## 10. Build order (ship each step working before the next)
+## 10. Build order — ALL COMPLETE
 
-1. **Scaffold** the Functions app; deploy a trivial HTTP 200 to Azure; confirm the public HTTPS URL.
-2. **Key Vault + OAuth bootstrap:** run `scripts/oauth_bootstrap.py` locally to seed the refresh token into Key Vault. Confirm the Function reads it (managed identity) and can fetch a known `sleep` document.
-3. **Port `data_processor.py`;** prove byte-shape-identical output vs. the `example/` fixture with a `pytest`.
-4. **`blob_store.py`:** upload-with-overwrite at the dated path, `application/json`, public-read. Verify the blob URL is fetchable in a browser.
-5. **`webhook_receiver`:** HMAC verify (unit-test with a crafted signed payload) + challenge handshake (per live docs) + callback fetch + blob write.
-6. **`create_subscription.py`:** register `sleep`/`create` + `sleep`/`update` at the deployed receiver; watch the verification handshake succeed.
-7. **End-to-end:** sync the ring via the Oura app → confirm a real notification lands → blob appears at the dated path within ~a minute. Test an `update` overwrites.
-8. **`renew_subscriptions`** timer (daily) + failure alerting.
-9. **Update the two Apple Shortcuts:** swap the GitHub raw base URL for the Blob base URL. Date-path building is unchanged in spirit — Nikhil uses Format Date + concatenated text; the path is now `hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json` (and `rhr/...`). Everything downstream (Get Dictionary → Repeat → Log Health Sample) is untouched.
-10. **Rip out** GitHub Actions workflows, `data_organizer.py`, committed `data/`, GitHub-PAT logic. Rewrite README.
+1. [x] **Scaffold** the Functions app; deploy a trivial HTTP 200 to Azure; confirm the public HTTPS URL.
+2. [x] **Key Vault + OAuth bootstrap:** run `scripts/oauth_bootstrap.py` locally to seed the refresh token into Key Vault. Confirm the Function reads it (managed identity) and can fetch a known `sleep` document.
+3. [x] **Port `data_processor.py`;** prove byte-shape-identical output vs. the `example/` fixture with a `pytest`.
+4. [x] **`blob_store.py`:** upload-with-overwrite at the dated path, `application/json`, public-read. Verify the blob URL is fetchable in a browser.
+5. [x] **`webhook_receiver`:** HMAC verify (unit-test with a crafted signed payload) + challenge handshake (per live docs) + callback fetch + blob write.
+6. [x] **`create_subscription.py`:** register `sleep`/`create` + `sleep`/`update` at the deployed receiver; watch the verification handshake succeed.
+7. [x] **End-to-end:** sync the ring via the Oura app → confirm a real notification lands → blob appears at the dated path within ~a minute. Test an `update` overwrites.
+8. [x] **`renew_subscriptions`** timer (daily) + failure alerting.
+9. [x] **Update the two Apple Shortcuts:** swap the GitHub raw base URL for the Blob base URL. Date-path building is unchanged in spirit — Nikhil uses Format Date + concatenated text; the path is now `hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json` (and `rhr/...`). Everything downstream (Get Dictionary → Repeat → Log Health Sample) is untouched.
+10. [x] **Rip out** GitHub Actions workflows, `data_organizer.py`, committed `data/`, GitHub-PAT logic. Rewrite README.
 
 ---
 
@@ -231,12 +232,14 @@ The current README documents the GitHub Actions pipeline — most is now wrong. 
 
 ---
 
-## 12. Open questions to resolve against live docs (don't guess)
+## 12. Open questions — RESOLVED
 
-1. Subscription-creation **verification challenge** format (GET+query-param echo vs JSON body). §4.
-2. Whether the notification `id` fetches via `GET /v2/usercollection/sleep/{id}` or needs a dated query. §4.
-3. `x-oura-signature` **HMAC algorithm + encoding** (SHA256 assumed; hex vs base64). §4.
-4. Exact **scope** required for the `sleep` doc's HRV series (only revisit if a fetch 403s). §2.
+All resolved during implementation and confirmed against live Oura API behavior:
+
+1. ~~Subscription-creation **verification challenge** format~~ — **GET with query params.** Oura sends `GET /api/webhook?verification_token=<token>&challenge=<challenge>`. We echo back `{"challenge": "<challenge>"}` as JSON. Implemented in `webhook_receiver.py`.
+2. ~~Whether the notification `id` fetches via `GET /v2/usercollection/sleep/{id}`~~ — **Yes, direct ID fetch works.** `GET /v2/usercollection/sleep/{id}` returns the full sleep document. Implemented in `oura_client.py:fetch_sleep_document()`.
+3. ~~`x-oura-signature` **HMAC algorithm + encoding**~~ — **SHA256, hex-encoded, uppercased.** Oura signs `timestamp + body` with the client secret. Implemented in `security.py:verify_hmac()`.
+4. ~~Exact **scope** required~~ — **`personal daily sleep heartrate`** works. No 403s encountered. Set in `oauth_bootstrap.py`.
 
 ---
 

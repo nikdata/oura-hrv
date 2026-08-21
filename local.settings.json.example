@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "KEY_VAULT_URI": "https://<your-keyvault-name>.vault.azure.net/",
+    "OURA_CLIENT_ID": "<your-oura-client-id>",
+    "BLOB_ACCOUNT_URL": "https://<your-storage-account>.blob.core.windows.net",
+    "BLOB_CONTAINER_NAME": "oura-data",
+    "OURA_WEBHOOK_VERIFICATION_TOKEN": "<your-chosen-verification-token>"
+  }
+}

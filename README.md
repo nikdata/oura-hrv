@@ -1,166 +1,187 @@
-# Oura HRV & RHR to Apple Health Automation Pipeline
+# Oura HRV & RHR to Apple Health
 
-A fully automated system that transfers detailed Heart Rate Variability (HRV) time series data and Resting Heart Rate (RHR) measurements from your Oura Ring to Apple Health.
+Transfers detailed Heart Rate Variability (HRV) time series and Resting Heart Rate (RHR) from your Oura Ring to Apple Health via Azure Functions + an Apple Shortcut.
 
-> [!IMPORTANT]  
-> **Why This Matters**: The Oura Ring captures superior sleep HRV data (80-96 readings per night) using rMSSD measurements and precise RHR timing, but doesn't sync this rich dataset to Apple Health. This automation bridges that gap, making detailed physiological data available for any health apps that integrate with Apple Health.
+**How it works:** Oura sends a webhook ~30s after your ring syncs. An Azure Function receives it, fetches the sleep document, extracts HRV + RHR, and writes the JSON to Azure Blob Storage. Your Apple Shortcut reads the blob and logs the data into Apple Health.
 
-## ✨ Key Features
+> **New to this project?** See [GETTING_STARTED.md](GETTING_STARTED.md) for a plain-language explanation of every component, Azure Functions basics, and how all the pieces fit together.
 
-- **Rich Time Series Data**: Captures 5-minute interval HRV readings throughout sleep (vs single daily averages)
-- **Precise RHR Timing**: Records the actual timestamp when your lowest heart rate occurred during sleep
-- **Fully Automated**: Zero-maintenance pipeline with self-updating OAuth tokens
-- **Travel & DST Proof**: Automatic timezone handling without manual adjustments  
-- **Duplicate Prevention**: Smart file-based system prevents data overwrites
-- **Apple Health Ready**: Optimized JSON format for seamless Apple Shortcuts integration
-- **GitHub Actions Powered**: Free, reliable cloud automation (no servers needed)
-- **Real Sleep Focus**: Uses rMSSD measurements during sleep (superior to general SDNN)
+## Technical Background
 
-## 🔬 Technical Background
+### HRV: rMSSD stays rMSSD
 
-### HRV Measurement Differences
-- **Oura Ring**: Uses **rMSSD** (Root Mean Square of Successive Differences) - optimized for sleep analysis
-- **Apple Watch**: Uses **SDNN** (Standard Deviation of NN intervals) - general purpose measurement
-- **Key Insight**: Oura's sleep-focused rMSSD provides more consistent and meaningful data for recovery tracking
+- **Oura Ring** measures **rMSSD** (Root Mean Square of Successive Differences) — optimized for sleep analysis
+- **Apple Watch** measures **SDNN** (Standard Deviation of NN intervals) — general purpose
+- These are different metrics and are **not interconvertible**. This pipeline writes to Apple Health's **RMSSD** field, not SDNN
+- Oura values are typically higher than Apple Watch readings and not directly comparable
 
-### RHR Measurement Methodology
-This automation captures **Resting Heart Rate (RHR)** exactly as Oura calculates it:
+### RHR Methodology
 
-- **Oura's Method**: Uses the **lowest heart rate value** recorded during sleep
-- **Timing**: Records the actual timestamp when this lowest value occurred (not midnight or wake-up time)
-- **Data Source**: Extracted from Oura's 5-minute heart rate intervals during sleep
-- **Multiple Occurrences**: If the same lowest value occurs multiple times, uses the last occurrence (representing sustained deep rest)
+Captures the **lowest heart rate** during sleep with the actual timestamp when it occurred (not midnight or wake-up time). If the same lowest value occurs multiple times, uses the last occurrence.
 
-> [!NOTE]  
-> **Important Distinction**: While Oura's documentation mentions "10-minute sampling" for general heart rate monitoring, the RHR metric in the Oura app is actually the single lowest heart rate value from the night's sleep data. This automation replicates this exact methodology, providing the timestamp when your body reached its most rested state during sleep.
+## Architecture
 
-> [!NOTE]  
-> These are different mathematical approaches to HRV calculation. Oura values are typically higher and not directly comparable to Apple Watch readings. However, I think using Oura's consistent measurement over time provides superior insights into recovery patterns.
-> Learn more about the differences [here](https://www.spikeapi.com/blog/understanding-hrv-metrics-a-deep-dive-into-sdnn-and-rmssd).
-
-### Data Flow Architecture
 ```
-Oura Ring → Sleep Processing → GitHub Actions (Multiple Daily Runs) → 
-Individual JSON Files → Apple Shortcuts (Daily 8 AM) → Apple Health → 
-Your Health Apps
+Oura Cloud
+  │  POST webhook (~30s after phone sync)
+  ▼
+Azure Function: webhook_receiver
+  │  1. Verify HMAC signature
+  │  2. Fetch sleep document from Oura API
+  │  3. Extract HRV time series + RHR (unchanged transform)
+  │  4. Write to Blob Storage at dated path
+  ▼
+Azure Blob Storage (public-read)
+  hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json
+  rhr/YYYY/MM/YYYY-MM-DD_sleep-rhr.json
+  ▲
+Apple Shortcut → Apple Health  (manually triggered)
 ```
 
-## 🚀 Quick Start
+A second timer Function (`renew_subscriptions`) runs daily to keep the webhook subscription alive.
 
-### Prerequisites
-- Oura Ring Gen 4 with active subscription
-    - I don't have a Gen 3 ring, so I can't be sure if this works for that model
-- iPhone with iOS 26+ (for Apple Shortcuts)
-- GitHub account (free tier sufficient)
-- An active Oura subscription
-- You must sync your ring after waking up through the Oura app for the data to make it to Oura Cloud. It can take up to 2 hours for the Oura Cloud to have your data available through the API.
+## Prerequisites
 
-> [!NOTE]
-> I have found that my sleep data is available within a minute of syncing via the app.
+- Oura Ring with active subscription
+- iPhone with Apple Shortcuts
+- Azure account (free tier is sufficient)
+- Azure CLI (`brew install azure-cli`) + Functions Core Tools (`brew install azure-functions-core-tools@4`)
+- [uv](https://docs.astral.sh/uv/) Python package manager (`brew install uv`)
+- An [Oura API application](https://cloud.ouraring.com/v2/docs) with client ID and secret
 
-### 1. Oura API Application Setup
+## Setup
 
-1. Visit [Oura Cloud API Console](https://cloud.ouraring.com/v2/docs)
-2. Create a new application with these settings:
-   - **Display name**: `My HRV Sync` (or any name)
-   - **Redirect URI**: `https://example.com/callback`
-   - **Scopes**: Check "Allow server-side authentication"
-   - **Authentication types**: Check both server-side and client-side
-3. Save your **Client ID** and **Client Secret**
+### 1. Deploy Azure Infrastructure
 
-### 2. Repository Setup
+```bash
+az login
+az group create --name oura-hrv-rg --location eastus
 
-1. Fork or clone this repository
-2. Go to **Settings** → **Secrets and variables** → **Actions**
-3. Add these repository secrets:
-   ```
-   OURA_CLIENT_ID=your_client_id_here
-   OURA_CLIENT_SECRET=your_client_secret_here
-   ```
+az deployment group create \
+  --resource-group oura-hrv-rg \
+  --template-file infra/main.bicep
+```
 
-### 3. OAuth Token Generation
+Note the outputs — you'll need `webhookUrl`, `keyVaultUri`, and `blobBaseUrl`.
 
-1. Create a `.env` file locally with your credentials:
-   ```bash
-   OURA_CLIENT_ID=your_client_id
-   OURA_CLIENT_SECRET=your_client_secret
-   ```
-   You can refer to the `.env.example` as a template
+### 2. Seed OAuth Tokens into Key Vault
 
-2. Run the OAuth setup script:
-   ```bash
-   python oura.py  # Run line by line up to line 115
-   ```
-   > [!IMPORTANT]
-   > Run the file oura.py line by line; otherwise you may experience errors. You will have to replace values.
+Grant yourself Key Vault access (replace `<your-user-object-id>` — get it with `az ad signed-in-user show --query id -o tsv`):
 
-3. Visit the authorization URL provided, authorize the app
-4. Copy the `code` parameter from the callback URL
-5. Complete the token exchange and save the tokens to GitHub Secrets:
-   ```
-   OURA_REFRESH_TOKEN=your_refresh_token_here
-   ```
+```bash
+az role assignment create \
+  --role "Key Vault Secrets Officer" \
+  --assignee <your-user-object-id> \
+  --scope /subscriptions/<sub-id>/resourceGroups/oura-hrv-rg/providers/Microsoft.KeyVault/vaults/ourahrv-kv
+```
 
-### 4. GitHub Actions Configuration
+Then run the bootstrap script:
 
-1. Create a Personal Access Token (classic) with full repo access
-2. Add it as a repository secret:
-   ```
-   REPO_SECRETS_TOKEN=your_github_pat_here
-   ```
-3. Enable Actions permissions: **Settings** → **Actions** → **General** → **Workflow permissions** → **Read and write permissions**
+```bash
+python scripts/oauth_bootstrap.py \
+  --vault-uri https://ourahrv-kv.vault.azure.net/ \
+  --client-id <oura-client-id> \
+  --client-secret <oura-client-secret>
+```
 
-### 5. Apple Shortcuts Setup
+This opens a browser for Oura authorization, then stores the refresh token and client secret in Key Vault.
 
-#### HRV Data Import
-Create a new Shortcut with these 8 actions:
+### 3. Add Client ID to Function App Settings
 
-1. **Get Current Date** → Current date
-2. **Format Date** → Custom format: `yyyy-MM-dd`
-3. **Text** → `https://raw.githubusercontent.com/yourusername/oura-hrv/main/data/[Formatted Date]_sleep-hrv.json`
-4. **Get Contents of URL** → Enable "Allow Untrusted Hosts"
-5. **If** → Contains "hrv" (error detection)
-6. **Get Dictionary from Input** → Parse JSON (inside If)
-7. **Repeat with Each** → Loop through entries (inside If)
-8. **Log Health Sample** → Settings:
-   - **Sample Type**: Heart Rate Variability RMSSD
-   - **Quantity**: `Item from Repeat` → `hrv`
-   - **Unit**: Milliseconds
-   - **Date**: `Item from Repeat` → `date_readable`
-   - **Source Name**: "Oura Ring"
+```bash
+az functionapp config appsettings set \
+  --name ourahrv-func \
+  --resource-group oura-hrv-rg \
+  --settings OURA_CLIENT_ID=<your-client-id>
+```
 
-#### RHR Data Import
-Create a second Shortcut with these 8 actions:
+### 4. Deploy the Function App
 
-1. **Get Current Date** → Current date
-2. **Format Date** → Custom format: `yyyy-MM-dd`
-3. **Text** → `https://raw.githubusercontent.com/yourusername/oura-hrv/main/data/[Formatted Date]_sleep-rhr.json`
-4. **Get Contents of URL** → Enable "Allow Untrusted Hosts"
-5. **If** → Contains "rhr" (error detection)
-6. **Get Dictionary from Input** → Parse JSON (inside If)
-7. **Repeat with Each** → Loop through entries (inside If)
-8. **Log Health Sample** → Settings:
-   - **Sample Type**: Resting Heart Rate
-   - **Quantity**: `Item from Repeat` → `rhr`
-   - **Unit**: Beats/Min
-   - **Date**: `Item from Repeat` → `date_readable`
-   - **Source Name**: "Oura Ring"
+```bash
+# Generate requirements.txt from uv (Azure Functions needs pip-format deps)
+uv export --no-hashes > requirements.txt
 
-Set both automations to run daily at 8:00 AM (or whatever time you prefer) with "Ask Before Running" OFF.
+# Deploy
+func azure functionapp publish ourahrv-func
+```
 
-## 📊 Data Format
+> **Why `requirements.txt` when we use `uv`?** Azure Functions doesn't understand `pyproject.toml` or `uv.lock`. When you deploy, Azure runs `pip install -r requirements.txt` in the cloud. We generate this file from uv to keep it in sync. See [GETTING_STARTED.md](GETTING_STARTED.md#why-two-requirementstxt-files) for details.
 
-### HRV Data
-Each night's HRV data is saved as `YYYY-MM-DD_sleep-hrv.json`:
+### 5. Register Webhook Subscriptions
+
+The Function must be deployed and reachable first:
+
+```bash
+python scripts/create_subscription.py \
+  --callback-url https://ourahrv-func.azurewebsites.net/api/webhook \
+  --client-id <oura-client-id> \
+  --client-secret <oura-client-secret> \
+  --verification-token <your-chosen-token>
+```
+
+This registers `sleep/create` and `sleep/update` subscriptions. Oura will send a verification challenge to confirm your endpoint works.
+
+Set the same verification token in your Function App settings:
+
+```bash
+az functionapp config appsettings set \
+  --name ourahrv-func \
+  --resource-group oura-hrv-rg \
+  --settings OURA_WEBHOOK_VERIFICATION_TOKEN=<your-chosen-token>
+```
+
+### 6. Update Apple Shortcuts
+
+Change the base URL in both Shortcuts from the old GitHub raw URL to:
+
+```
+https://ourahrvstore.blob.core.windows.net/oura-data/hrv/{year}/{month}/{date}_sleep-hrv.json
+https://ourahrvstore.blob.core.windows.net/oura-data/rhr/{year}/{month}/{date}_sleep-rhr.json
+```
+
+The path structure (`YYYY/MM/YYYY-MM-DD_sleep-{metric}.json`) and JSON format are unchanged — only the base URL is different. Everything downstream in the Shortcut (Get Dictionary, Repeat, Log Health Sample) stays the same.
+
+## Filling Missing Data
+
+If a webhook was missed (e.g. phone didn't sync in time), you can backfill a single date:
+
+```bash
+python scripts/fill_missing.py 2026-08-19
+```
+
+The script checks blob storage for both HRV and RHR files. If either is missing, it fetches from the Oura API and uploads only what's absent. If both already exist, it reports that and stops.
+
+Use `--local` to write to `test_output/` instead of blob storage.
+
+Requires `az login` and a `.env` with `OURA_CLIENT_ID` and `KEY_VAULT_URI` (credentials are pulled from Key Vault each run).
+
+For bulk backfills across a date range, use `scripts/backfill.py` instead.
+
+## Re-authorization
+
+Oura refresh tokens eventually expire. When this happens, the Function logs `invalid_grant` — run the bootstrap script again:
+
+```bash
+python scripts/oauth_bootstrap.py \
+  --vault-uri https://ourahrv-kv.vault.azure.net/ \
+  --client-id <oura-client-id> \
+  --client-secret <oura-client-secret>
+```
+
+## Data Format
+
+### HRV (`hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json`)
+
+Bare JSON array, 80-96 entries per night (one per 5-min interval):
 
 ```json
 [
   {
-    "date": 1726817400,
-    "date_readable": "2025-09-20 06:30:00",
-    "timezone": "CDT", 
-    "timezone_offset": "-0500",
-    "hrv": 42.5,
+    "date": 1780267377,
+    "date_readable": "2026-05-31 22:42:57",
+    "timezone": "UTC",
+    "timezone_offset": "+0000",
+    "hrv": 18.0,
     "unit": "ms",
     "source": "oura_ring_rmssd",
     "measurement_type": "rMSSD"
@@ -168,17 +189,18 @@ Each night's HRV data is saved as `YYYY-MM-DD_sleep-hrv.json`:
 ]
 ```
 
-### RHR Data
-Each night's RHR data is saved as `YYYY-MM-DD_sleep-rhr.json`:
+### RHR (`rhr/YYYY/MM/YYYY-MM-DD_sleep-rhr.json`)
+
+Bare JSON array, typically one entry:
 
 ```json
 [
   {
-    "date": 1726789320,
-    "date_readable": "2025-09-20 03:42:00",
-    "timezone": "CDT",
-    "timezone_offset": "-0500", 
-    "rhr": 58,
+    "date": 1780292577,
+    "date_readable": "2026-06-01 05:42:57",
+    "timezone": "UTC",
+    "timezone_offset": "+0000",
+    "rhr": 59,
     "unit": "bpm",
     "source": "oura_ring_sleep",
     "measurement_type": "lowest_heart_rate"
@@ -186,208 +208,27 @@ Each night's RHR data is saved as `YYYY-MM-DD_sleep-rhr.json`:
 ]
 ```
 
-### File Structure
+Timezone fields are per-record and come straight from Oura — they vary by night (home vs. travel, DST changes).
 
-The repository automatically organizes data files into a hierarchical structure for better long-term management:
+## Cost
 
-```
-data/
-├── hrv/
-│   └── 2025/
-│       ├── 09/
-│       │   ├── 2025-09-18_sleep-hrv.json  # 87 HRV readings
-│       │   ├── 2025-09-19_sleep-hrv.json  # 92 HRV readings
-│       │   └── 2025-09-20_sleep-hrv.json  # 84 HRV readings
-│       └── 10/
-│           └── 2025-10-24_sleep-hrv.json  # 96 HRV readings
-└── rhr/
-    └── 2025/
-        ├── 09/
-        │   ├── 2025-09-18_sleep-rhr.json  # 1 RHR measurement
-        │   ├── 2025-09-19_sleep-rhr.json  # 1 RHR measurement
-        │   └── 2025-09-20_sleep-rhr.json  # 1 RHR measurement
-        └── 10/
-            └── 2025-10-24_sleep-rhr.json  # 1 RHR measurement
-```
+Single-user, ~once-daily traffic: **effectively free** on Azure Consumption plan. The Functions free grant (1M executions + 400k GB-s/month) covers this many times over. Blob Storage and Key Vault add cents. Application Insights has a daily cap configured to prevent surprise costs.
 
-**Organization Details:**
-- Files are automatically organized daily at 10 PM CDT
-- Structure: `data/{metric}/{year}/{month}/YYYY-MM-DD_sleep-{metric}.json`
-- No duplicate handling needed - already-organized files are skipped
-- Apple Shortcuts continue to work with the raw GitHub URLs (organization is transparent to end users)
-
-## ⚙️ Automation Schedule
-
-The system runs multiple GitHub Actions workflows to ensure reliable data capture and organization:
-
-### Data Collection (process-hrv.yml)
-Multiple daily runs to capture sleep data:
-
-```yaml
-# GitHub Actions Schedule (All times CDT)
-- 5:45 AM, 7:45 AM     # Early morning capture
-- 9:45 AM, 11:45 AM    # Standard processing window
-- 1:45 PM, 3:45 PM     # Afternoon backup
-- 6:45 PM              # Evening final attempt
-```
-
-**Why Multiple Runs?**
-- Handles variable sleep schedules and wake times
-- Accommodates Oura's processing delays (2-8 hours post wake-up)
-- Prevents failures from complex sleep patterns or travel
-- Zero duplicates due to smart file-based deduplication
-
-### Data Organization (organize-data.yml)
-Daily cleanup at 10 PM CDT to maintain file structure:
-
-```yaml
-# Runs daily at 10:00 PM CDT (3:00 AM UTC)
-- Organizes data files into year/month folders
-- Only commits if files were actually moved
-- Keeps repository clean as data accumulates over months/years
-```
-
-## 🔧 Key Components
-
-### Core Python Modules
-
-#### `oura_client.py`
-- OAuth2 token management with automatic refresh
-- GitHub Secrets auto-updating (self-sustaining automation)
-- API request handling with 401 error recovery
-- Fetches sleep data with configurable date ranges
-
-#### `data_processor.py`
-- Extracts HRV time series from Oura sleep sessions
-- Extracts RHR with precise timing from sleep heart rate data
-- Filters invalid values (None, 0, negative readings)
-- Generates timezone-aware timestamps for travel
-- Creates individual files per night (prevents duplicates)
-
-#### `main.py`
-- Orchestrates the complete data pipeline
-- Environment validation and error handling
-- Status reporting and logging
-
-#### `data_organizer.py`
-- Automatically organizes data files into hierarchical structure
-- Moves files from `data/` root into `data/{metric}/{year}/{month}/`
-- Pattern matching for `YYYY-MM-DD_sleep-{hrv|rhr}.json` files
-- Dry-run mode for testing (`--dry-run` flag)
-- Prevents duplicates and skips already-organized files
-
-### GitHub Actions Workflows
-
-#### Data Processing (`.github/workflows/process-hrv.yml`)
-- **Triggers**: Scheduled runs + manual triggers + webhook-ready
-- **Self-updating**: Manages its own OAuth token rotation
-- **Zero maintenance**: Fully autonomous operation
-
-#### Data Organization (`.github/workflows/organize-data.yml`)
-- **Triggers**: Daily at 10 PM CDT + manual workflow dispatch
-- **Function**: Organizes accumulated data files into year/month structure
-- **Smart commits**: Only commits when files are actually moved
-- **Scalability**: Keeps repository navigable as data grows over months/years
-
-## 🛠️ Local Development & Testing
-
-### Debug Script
-Use the included debug script to troubleshoot timing or data issues:
+## Local Development
 
 ```bash
-python debug-oura.py
+uv sync --extra dev
+
+# Run tests
+uv run python -m pytest tests/ -v
+
+# Local Function testing (requires Azurite or a real storage connection)
+cp local.settings.json.example local.settings.json
+# Edit local.settings.json with your values
+func start
 ```
 
-This provides detailed analysis of:
-- OAuth token status
-- Recent sleep sessions and HRV availability
-- Data processing timing insights
-- API connectivity validation
+## Further Reading
 
-### Manual Testing
-```bash
-# Install dependencies
-pip install requests python-dotenv python-dateutil PyNaCl
-
-# Set up .env file with your tokens
-# Run the main pipeline
-python main.py
-
-# Test data organization (preview mode)
-python src/data_organizer.py --dry-run
-
-# Actually organize files
-python src/data_organizer.py
-```
-
-## 🎯 Integration with Health Apps
-
-This automation makes detailed Oura HRV and RHR data available in Apple Health, where it can be used by any app that integrates with Apple Health data:
-
-### Benefits for Health Apps
-- **High-frequency sleep HRV data** (vs single daily readings from most devices)
-- **Precise RHR timing** showing when your body reached its most rested state
-- **Consistent rMSSD measurements** throughout sleep  
-- **Automatic daily data availability** by 10-11 AM
-
-### Compatible Apps
-Any app that uses Apple Health HRV or RHR data will benefit from this richer dataset:
-- HRV4Training
-- EliteHRV  
-- Welltory
-- Bevel
-- Custom health dashboards
-- Any app using HealthKit HRV or heart rate data
-
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**"No data available today"**
-- Normal if you woke up very early or had disrupted sleep
-- Oura may need 2-8 hours to process complex sleep patterns
-- The automation will catch it on the next run
-
-**Apple Shortcuts failing**
-- Check "Allow Untrusted Hosts" is enabled
-- Verify the GitHub repository URL is correct
-- Ensure the shortcut has Health app permissions
-
-**GitHub Actions not running**
-- Verify repository secrets are set correctly
-- Check Actions tab for error messages
-- Confirm workflow permissions are set to "Read and write"
-
-### OAuth Token Issues
-The system automatically handles token refresh, but if you see persistent auth errors:
-1. Re-run the OAuth setup process
-2. Update the `OURA_REFRESH_TOKEN` secret
-3. The next automation run will self-correct
-
-### RHR Data Missing
-If RHR files aren't being created:
-- Verify that your sleep sessions include heart rate time series data
-- RHR is only created when heart rate intervals are available (some nights may not have this data)
-- Check the GitHub Actions logs for processing details
-
-## 📈 Benefits Over Default Oura Integration
-
-| Feature | Oura App → Apple Health | This Automation |
-|---------|------------------------|-----------------|
-| HRV Frequency | None (no sync) | 80-96 readings/night |
-| HRV Measurement Type | N/A | rMSSD (sleep-optimized) |
-| HRV Data Richness | N/A | 5-minute intervals |
-| RHR Sync | None (no sync) | Precise timing of lowest HR |
-| RHR Accuracy | N/A | Actual occurrence time during sleep |
-| Automation | Manual only | Fully automatic |
-| Travel Handling | N/A | Automatic timezone |
-| Historical Data | N/A | Complete archive |
-
-## ✌️ Random Notes
-
-This project uses a functional programming approach with minimal classes and exception handling. When contributing:
-
-- Use functional style (see existing code patterns)
-- Test with the debug script before submitting PRs
-- Follow the individual file per night architecture
-- Maintain backwards compatibility with Apple Shortcuts format
+- [GETTING_STARTED.md](GETTING_STARTED.md) — Detailed walkthrough of every component, Azure Functions concepts, authentication flows, and troubleshooting
+- [gameplan.md](gameplan.md) — Original design document with decision rationale

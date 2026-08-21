@@ -1,14 +1,20 @@
 [project]
 name = "oura-hrv"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.2.0"
+description = "Oura Ring HRV/RHR webhook processor — Azure Functions"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
-    "jupyterlab>=4.4.7",
-    "polars>=1.33.1",
-    "pydantic>=2.11.9",
-    "pynacl>=1.6.0",
+    "azure-functions>=1.21.0",
+    "azure-identity>=1.17.0",
+    "azure-keyvault-secrets>=4.8.0",
+    "azure-storage-blob>=12.22.0",
+    "ipykernel>=7.3.0",
     "python-dotenv>=1.1.1",
     "requests>=2.32.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
 ]
