@@ -4,6 +4,10 @@ Priority items to finish. Check this file at the start of every session, work th
 
 ## Open
 
+- [x] **Verify the Notion push (Event Grid → notion-automation `track_health`).** Done 2026-10-10: simulated a new-day race (re-saved 10/5 blobs together) → one Health row + one card; backfilled 10/5–10/9 the same way. `health-sleep` merged to `main` here and in `notion-automation`.
+
+- [ ] **Before any sleep/readiness backfill:** those writes now flow into Notion (one Health row + one habit card per day). Make sure `--metrics` excludes `sleep`/`readiness` unless you want Notion history filled in. The HRV/RHR backfill below is unaffected.
+
 - [ ] **Confirm the webhooks write sleep + readiness on their own.** These were deployed on 2026-10-10, so the morning of 2026-10-11 is the first real test. After the ring syncs, run `uv run python scripts/check_health.py --days 2`. 2026-10-11 should show HRV + RHR + Sleep + Readiness. If Sleep or Readiness is missing, check the Function logs (TROUBLESHOOTING.md → "How to Check Function Logs").
 
 - [ ] **Fix the HRV/RHR history.** Before the nap filter, evening dozes overwrote the night's data on **25 days**, and **58 nights** never got an HRV/RHR file. To fix it, run this yourself (it writes about 1,300 blobs, which Claude's permission check blocks):
