@@ -19,6 +19,12 @@ param baseName string = 'ourahrv'
 @description('Azure region')
 param location string = resourceGroup().location
 
+@description('Resource ID of the notion-automation Function App (notion2ndbrain-func). When set, sleep/readiness blobs are pushed to its track_health function via Event Grid. Leave empty to skip.')
+param notionFunctionAppId string = ''
+
+@description('Principal ID of the notion-automation Function App managed identity, granted read access to oura-data. Required with notionFunctionAppId.')
+param notionFunctionPrincipalId string = ''
+
 // Resource names derived from the base name
 var storageName = '${baseName}store'
 var functionAppName = '${baseName}-func'
@@ -175,6 +181,68 @@ resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
     principalType: 'ServicePrincipal'
     // 'ba92f5b4-...' is the built-in role ID for "Storage Blob Data Contributor"
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  }
+}
+
+// --- Event Grid: push sleep/readiness blobs to notion-automation ---
+// A system topic publishes this storage account's blob events. The
+// subscription delivers only BlobCreated for sleep/ and readiness/ (HRV/RHR
+// never fire) to the track_health function in the notion-automation app,
+// which upserts the Notion Health DB. Overwrites (Oura "update" events)
+// re-fire, so Notion self-heals. Cost: free tier (first 100k ops/month).
+var pushToNotion = !empty(notionFunctionAppId)
+
+resource eventTopic 'Microsoft.EventGrid/systemTopics@2022-06-15' = if (pushToNotion) {
+  name: '${storageName}-events'
+  location: location
+  properties: {
+    source: storageAccount.id
+    topicType: 'Microsoft.Storage.StorageAccounts'
+  }
+}
+
+resource notionHealthSubscription 'Microsoft.EventGrid/systemTopics/eventSubscriptions@2022-06-15' = if (pushToNotion) {
+  parent: eventTopic
+  name: 'notion-track-health'
+  properties: {
+    destination: {
+      endpointType: 'AzureFunction'
+      properties: {
+        resourceId: '${notionFunctionAppId}/functions/track_health'
+        maxEventsPerBatch: 1
+      }
+    }
+    filter: {
+      includedEventTypes: [ 'Microsoft.Storage.BlobCreated' ]
+      advancedFilters: [
+        {
+          operatorType: 'StringBeginsWith'
+          key: 'subject'
+          values: [
+            '/blobServices/default/containers/${containerName}/blobs/sleep/'
+            '/blobServices/default/containers/${containerName}/blobs/readiness/'
+          ]
+        }
+      ]
+    }
+    retryPolicy: {
+      maxDeliveryAttempts: 30
+      eventTimeToLiveInMinutes: 1440
+    }
+  }
+}
+
+// notion-automation reads the blob with its own managed identity, so it
+// doesn't depend on the container's public access (which exists only for
+// the Apple Shortcut). Read-only, scoped to the data container.
+resource notionReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (pushToNotion) {
+  name: guid(dataContainer.id, notionFunctionAppId, '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
+  scope: dataContainer
+  properties: {
+    principalId: notionFunctionPrincipalId
+    principalType: 'ServicePrincipal'
+    // '2a2b9908-...' is the built-in role ID for "Storage Blob Data Reader"
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
   }
 }
 
