@@ -11,8 +11,9 @@
 #    - Detects "invalid_grant" (dead token chain) and tells you to
 #      re-run oauth_bootstrap.py
 #
-# 2. Sleep document fetching:
-#    - Fetches a single sleep document by ID (used by the webhook receiver)
+# 2. Document fetching:
+#    - Fetches a single sleep or daily readiness document by ID (used by
+#      the webhook receiver)
 #    - Automatic retry on 401 (expired access token)
 #
 # 3. Webhook subscription management:
@@ -111,29 +112,39 @@ def refresh_access_token() -> str:
     return access_token
 
 
-def fetch_sleep_document(sleep_id: str) -> dict:
-    """Fetch a single sleep document by ID, with automatic token refresh on 401.
+def fetch_document(collection: str, doc_id: str) -> dict:
+    """Fetch a single document by ID, with automatic token refresh on 401.
 
-    The webhook payload only contains the sleep document's ID. This function
-    calls back to Oura's API to get the full document (which contains the
-    HRV time series, heart rate data, etc.).
+    The webhook payload only contains the document's ID. This function
+    calls back to Oura's API to get the full document. `collection` is the
+    API path segment, e.g. "sleep" or "daily_readiness".
     """
     access_token = refresh_access_token()
 
-    url = f"{API_BASE}/usercollection/sleep/{sleep_id}"
+    url = f"{API_BASE}/usercollection/{collection}/{doc_id}"
     headers = {"Authorization": f"Bearer {access_token}"}
     response = requests.get(url, headers=headers)
 
     # Access tokens can expire between the refresh and the API call
     # (rare but possible). Retry once with a fresh token.
     if response.status_code == 401:
-        logger.warning("Got 401 fetching sleep doc, refreshing token and retrying")
+        logger.warning(f"Got 401 fetching {collection} doc, refreshing token and retrying")
         access_token = refresh_access_token()
         headers["Authorization"] = f"Bearer {access_token}"
         response = requests.get(url, headers=headers)
 
     response.raise_for_status()
     return response.json()
+
+
+def fetch_sleep_document(sleep_id: str) -> dict:
+    """Fetch a sleep session (HRV time series, heart rate, bedtimes, etc.)."""
+    return fetch_document("sleep", sleep_id)
+
+
+def fetch_readiness_document(readiness_id: str) -> dict:
+    """Fetch a daily readiness document (score + contributors)."""
+    return fetch_document("daily_readiness", readiness_id)
 
 
 # -----------------------------------------------------------------------

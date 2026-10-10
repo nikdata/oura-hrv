@@ -11,11 +11,14 @@
 #    happens once per subscription creation.
 #
 # 2. POST — Actual webhook notifications. Every time your Oura ring
-#    syncs sleep data, Oura sends a POST here with a small JSON payload
-#    like {"data_type": "sleep", "event_type": "create", "object_id": "abc123"}.
+#    syncs, Oura sends a POST here with a small JSON payload like
+#    {"data_type": "sleep", "event_type": "create", "object_id": "abc123"}.
 #    The payload is just a pointer — we then call back to Oura's API
-#    to fetch the full sleep document, extract HRV + RHR from it, and
-#    upload the results to Azure Blob Storage.
+#    to fetch the full document and upload the results to Azure Blob
+#    Storage. Two data types are handled:
+#      - sleep: overnight sessions only (naps are skipped). Produces
+#        HRV, RHR and sleep-times files.
+#      - daily_readiness: produces the readiness score file.
 #
 # Security: Every POST from Oura includes an HMAC signature header
 # (x-oura-signature). We verify it before processing to ensure the
@@ -29,8 +32,10 @@ import os
 import azure.functions as func
 
 from core.blob_store import upload_blob
-from core.data_processor import process_sleep_document
-from core.oura_client import fetch_sleep_document, get_client_credentials
+from core.data_processor import (
+    is_overnight_sleep, process_readiness_document, process_sleep_document, process_sleep_times,
+)
+from core.oura_client import fetch_readiness_document, fetch_sleep_document, get_client_credentials
 from core.security import verify_hmac
 
 logger = logging.getLogger(__name__)
@@ -96,46 +101,67 @@ def webhook_receiver(req: func.HttpRequest) -> func.HttpResponse:
     event_type = payload.get("event_type")
     data_type = payload.get("data_type")
 
-    # We only care about sleep data — ignore anything else Oura might send
-    if data_type != "sleep":
-        logger.info(f"Ignoring non-sleep event: {data_type}/{event_type}")
+    # We only care about sleep and readiness — ignore anything else Oura might send
+    if data_type not in ("sleep", "daily_readiness"):
+        logger.info(f"Ignoring event: {data_type}/{event_type}")
         return func.HttpResponse("OK", status_code=200)
 
     # We handle both "create" (first sync) and "update" (Oura revises
-    # sleep data hours later with improved HRV/staging analysis)
+    # data hours later with improved HRV/staging analysis)
     if event_type not in ("create", "update"):
         logger.info(f"Ignoring event type: {event_type}")
         return func.HttpResponse("OK", status_code=200)
 
-    sleep_id = payload.get("object_id")
-    if not sleep_id:
+    object_id = payload.get("object_id")
+    if not object_id:
         logger.error("No object_id in webhook payload")
         return func.HttpResponse("Bad Request", status_code=400)
 
-    logger.info(f"Processing sleep/{event_type} for id={sleep_id}")
+    logger.info(f"Processing {data_type}/{event_type} for id={object_id}")
 
+    if data_type == "sleep":
+        _handle_sleep(object_id)
+    else:
+        _handle_readiness(object_id)
+
+    return func.HttpResponse("OK", status_code=200)
+
+
+def _upload(metric: str, day: str, data: bytes | None):
+    """Upload one file if there's data, otherwise log that it was missing."""
+    if data:
+        blob_name = upload_blob(metric, day, data)
+        logger.info(f"Wrote {blob_name}")
+    else:
+        logger.warning(f"No valid {metric} data for {day}")
+
+
+def _handle_sleep(sleep_id: str):
     # The webhook payload only tells us *what changed* — it doesn't include
     # the actual data. We need to call back to Oura's API to get the full
-    # sleep document (which contains HRV time series, heart rate, etc.)
+    # sleep document (which contains HRV time series, heart rate, bedtimes, etc.)
     sleep_doc = fetch_sleep_document(sleep_id)
+
+    # Naps get their own sleep sessions with the same "day" as the night
+    # before. Without this check, a nap would overwrite that day's files.
+    if not is_overnight_sleep(sleep_doc):
+        logger.info(f"Skipping nap/non-overnight sleep (type={sleep_doc.get('type')}) for {sleep_doc.get('day')}")
+        return
 
     # Extract HRV and RHR using the same transform logic that the old
     # GitHub Actions pipeline used. The output JSON shape is identical
     # so the Apple Shortcut doesn't need to change.
     hrv_bytes, rhr_bytes, sleep_date = process_sleep_document(sleep_doc)
+    sleep_bytes, _ = process_sleep_times(sleep_doc)
 
-    # Upload the results to Azure Blob Storage at a dated path like
+    # Upload the results to Azure Blob Storage at dated paths like
     # hrv/2026/08/2026-08-21_sleep-hrv.json
-    if hrv_bytes:
-        blob_name = upload_blob("hrv", sleep_date, hrv_bytes)
-        logger.info(f"Wrote {blob_name}")
-    else:
-        logger.warning(f"No valid HRV data for {sleep_date}")
+    _upload("hrv", sleep_date, hrv_bytes)
+    _upload("rhr", sleep_date, rhr_bytes)
+    _upload("sleep", sleep_date, sleep_bytes)
 
-    if rhr_bytes:
-        blob_name = upload_blob("rhr", sleep_date, rhr_bytes)
-        logger.info(f"Wrote {blob_name}")
-    else:
-        logger.warning(f"No valid RHR data for {sleep_date}")
 
-    return func.HttpResponse("OK", status_code=200)
+def _handle_readiness(readiness_id: str):
+    readiness_doc = fetch_readiness_document(readiness_id)
+    readiness_bytes, day = process_readiness_document(readiness_doc)
+    _upload("readiness", day, readiness_bytes)

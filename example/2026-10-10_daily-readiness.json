@@ -1,0 +1,19 @@
+{
+  "id": "ed8ebaf5-64d1-4113-bc92-5061f741aa4f",
+  "contributors": {
+    "activity_balance": 81,
+    "body_temperature": 100,
+    "hrv_balance": 69,
+    "previous_day_activity": 73,
+    "previous_night": 73,
+    "recovery_index": 22,
+    "resting_heart_rate": 55,
+    "sleep_balance": 73,
+    "sleep_regularity": 87
+  },
+  "day": "2026-10-10",
+  "score": 67,
+  "temperature_deviation": 0.0,
+  "temperature_trend_deviation": -0.04,
+  "timestamp": "2026-10-10T00:00:00.000+00:00"
+}

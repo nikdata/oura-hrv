@@ -301,6 +301,8 @@ python scripts/create_subscription.py \
   --verification-token <your-chosen-token>
 ```
 
+Then run the same command again with `--data-type daily_readiness` for the readiness subscriptions.
+
 The Function must be deployed and reachable — Oura sends a verification challenge during registration.
 
 ### Why would they expire if we renew daily?
@@ -323,9 +325,12 @@ Checks blob storage first — only fetches and uploads what's actually missing. 
 
 ```bash
 python scripts/backfill.py --start 2025-01-01 --end 2026-08-19
+python scripts/backfill.py --start 2025-01-01 --end 2026-08-19 --metrics hrv,rhr,sleep,readiness
 ```
 
-Fetches in 30-day chunks. Uses `.env` credentials directly (needs `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET`, `OURA_REFRESH_TOKEN`).
+Fetches in 30-day chunks. By default writes only sleep and readiness files (`--metrics sleep,readiness`), so existing HRV/RHR files aren't touched unless you ask. Naps are skipped. Days with no data are skipped and counted in the summary at the end — that's normal for days you didn't wear the ring.
+
+Uses Key Vault for Oura credentials, same as production (needs `az login`, `OURA_CLIENT_ID` and `KEY_VAULT_URI`). This keeps the refresh token in one place so a backfill can't break the live pipeline's token.
 
 ### Local testing (no blob upload)
 
@@ -381,6 +386,18 @@ If you see JSON data, the blob exists and the problem is in the Shortcut (wrong 
 **Why:** Oura's sleep document for that night didn't contain usable HRV data. This happens with very short sleep sessions, naps, or when the ring wasn't worn properly.
 
 **Fix:** Usually resolves on its own when Oura sends a `sleep/update` event with revised data. If the date is old, try `python scripts/fill_missing.py <date>` — the updated data might be available now.
+
+### "Skipping nap/non-overnight sleep" in logs
+
+**Why:** Oura sends a separate `sleep` webhook for naps. Only overnight sleep (`type: long_sleep`) is saved, so a nap never overwrites that day's HRV, RHR or sleep files.
+
+**Fix:** Nothing — this is expected.
+
+### "No valid readiness data for {date}"
+
+**Why:** Oura hasn't calculated a readiness score for that day yet (the score is empty).
+
+**Fix:** Usually resolves on its own with a `daily_readiness/update` event. For an old date: `python scripts/backfill.py --start <date> --end <date> --metrics readiness`.
 
 ### "No webhook subscriptions found" in logs
 

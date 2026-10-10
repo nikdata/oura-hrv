@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------
 # blob_store.py — Azure Blob Storage helpers
 # -----------------------------------------------------------------------
-# Handles uploading processed HRV/RHR JSON files to Azure Blob Storage.
+# Handles uploading processed JSON files (HRV, RHR, sleep, readiness) to Azure Blob Storage.
 #
 # Blob Storage is Azure's object storage (like AWS S3). Files are stored
 # in "containers" (like S3 buckets). Our container is called "oura-data"
@@ -11,6 +11,8 @@
 # The blob path is pre-sorted by date:
 #   hrv/2026/08/2026-08-21_sleep-hrv.json
 #   rhr/2026/08/2026-08-21_sleep-rhr.json
+#   sleep/2026/08/2026-08-21_sleep.json
+#   readiness/2026/08/2026-08-21_readiness.json
 #
 # Authentication: The Function App has a "managed identity" (think of it
 # as an Azure-internal username/password that Azure manages for you).
@@ -45,10 +47,21 @@ def _get_container_client():
     return service.get_container_client(container)
 
 
+# The part of the filename after the date, per metric. HRV/RHR keep their
+# original "sleep-" prefix because the Apple Shortcuts fetch those exact names.
+FILE_SUFFIX = {
+    "hrv": "sleep-hrv",
+    "rhr": "sleep-rhr",
+    "sleep": "sleep",
+    "readiness": "readiness",
+}
+
+
 def blob_path(metric: str, sleep_date: str) -> str:
-    """Build the dated blob path: hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json"""
+    """Build the dated blob path, e.g. hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json"""
     year, month, _ = sleep_date.split("-")
-    return f"{metric}/{year}/{month}/{sleep_date}_sleep-{metric}.json"
+    suffix = FILE_SUFFIX.get(metric, f"sleep-{metric}")
+    return f"{metric}/{year}/{month}/{sleep_date}_{suffix}.json"
 
 
 def upload_blob(metric: str, sleep_date: str, data: bytes) -> str:

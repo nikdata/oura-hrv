@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register Oura webhook subscriptions for sleep/create and sleep/update.
+"""Register Oura webhook subscriptions (create + update) for one data type.
 
 The receiver Function must be deployed and reachable before running this,
 because Oura sends a verification challenge to the callback URL during creation.
@@ -7,7 +7,11 @@ because Oura sends a verification challenge to the callback URL during creation.
 Usage:
     python scripts/create_subscription.py \\
         --callback-url https://<func-app>.azurewebsites.net/api/webhook \\
-        --client-id <oura-client-id> --client-secret <oura-client-secret>
+        --client-id <oura-client-id> --client-secret <oura-client-secret> \\
+        --verification-token <token> [--data-type daily_readiness]
+
+--data-type defaults to "sleep". Run once per data type the pipeline uses:
+"sleep" (HRV, RHR, sleep times) and "daily_readiness" (readiness score).
 """
 import argparse
 
@@ -45,13 +49,15 @@ def main():
     parser.add_argument("--client-secret", required=True, help="Oura app client secret")
     parser.add_argument("--verification-token", required=True,
                         help="Secret token echoed back during verification challenge")
+    parser.add_argument("--data-type", default="sleep", choices=["sleep", "daily_readiness"],
+                        help="Oura data type to subscribe to (default: sleep)")
     args = parser.parse_args()
 
     for event_type in ("create", "update"):
-        print(f"Creating sleep/{event_type} subscription...")
+        print(f"Creating {args.data_type}/{event_type} subscription...")
         result = create_subscription(
             args.callback_url, args.client_id, args.client_secret,
-            data_type="sleep", event_type=event_type,
+            data_type=args.data_type, event_type=event_type,
             verification_token=args.verification_token,
         )
         print(f"  Created: id={result.get('id')}, status={result.get('status')}")

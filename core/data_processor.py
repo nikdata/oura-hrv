@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------
-# data_processor.py — HRV and RHR extraction from Oura sleep documents
+# data_processor.py — HRV, RHR, sleep times and readiness extraction
 # -----------------------------------------------------------------------
 # This is the core transform logic — the "crown jewel" of the pipeline.
 # It takes raw sleep data from Oura's API and converts it into the JSON
@@ -23,6 +23,15 @@
 #   - If the same lowest value appears multiple times, we use the last
 #     occurrence (most likely to be during deep sleep).
 #   - Output is a single-element JSON array.
+#
+# Sleep times:
+#   - Bedtime start/end and total sleep duration for overnight sleep.
+#   - Only "long_sleep" sessions count as overnight sleep. Naps ("sleep",
+#     "late_nap") and false detections ("rest") are skipped by the callers
+#     using is_overnight_sleep(), so a nap never overwrites a night's files.
+#
+# Readiness:
+#   - Just the day and the readiness score from the daily_readiness doc.
 #
 # Timezone handling:
 #   - Each reading's timezone comes directly from Oura and reflects
@@ -146,3 +155,76 @@ def process_sleep_document(sleep_doc):
     rhr_bytes = json.dumps(rhr_entries, indent=2).encode('utf-8') if rhr_entries else None
 
     return hrv_bytes, rhr_bytes, sleep_date
+
+
+def is_overnight_sleep(sleep_doc):
+    """True if this sleep session is overnight sleep, not a nap.
+
+    Oura marks sleep longer than 3 hours as "long_sleep". Everything else
+    ("sleep", "late_nap", "rest", "deleted") is a nap or not real sleep.
+    """
+    return sleep_doc.get('type') == 'long_sleep'
+
+
+def extract_sleep_times(sleep_doc):
+    """Extract bedtime, wake time and total sleep from one sleep session.
+
+    Oura's timestamps include the local offset where the ring was worn
+    (e.g. "2026-10-09T23:12:00-05:00"), so the readable times are local
+    to wherever you slept.
+    """
+    total_sleep = sleep_doc.get('total_sleep_duration')
+    start = sleep_doc.get('bedtime_start')
+    end = sleep_doc.get('bedtime_end')
+
+    if total_sleep is None or not start or not end:
+        return []
+
+    start_time = datetime.fromisoformat(start.replace('Z', '+00:00'))
+    end_time = datetime.fromisoformat(end.replace('Z', '+00:00'))
+
+    return [{
+        'day': sleep_doc['day'],
+        'bedtime_start': int(start_time.timestamp()),
+        'bedtime_start_readable': start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        'bedtime_end': int(end_time.timestamp()),
+        'bedtime_end_readable': end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        'timezone_offset': end_time.strftime("%z"),
+        'total_sleep_seconds': total_sleep,
+        'total_sleep_hours': round(total_sleep / 3600, 2),
+        'time_in_bed_seconds': sleep_doc.get('time_in_bed'),
+        'source': 'oura_ring_sleep',
+        'measurement_type': 'long_sleep'
+    }]
+
+
+def process_sleep_times(sleep_doc):
+    """Process a sleep session into sleep-times JSON.
+
+    Returns (sleep_json_bytes, sleep_date). Bytes is None if the session
+    has no sleep duration or bedtimes.
+    """
+    entries = extract_sleep_times(sleep_doc)
+    sleep_bytes = json.dumps(entries, indent=2).encode('utf-8') if entries else None
+    return sleep_bytes, sleep_doc['day']
+
+
+def process_readiness_document(readiness_doc):
+    """Process a daily_readiness doc into readiness JSON.
+
+    Only the day and score are kept. Returns (readiness_json_bytes, day).
+    Bytes is None if Oura hasn't calculated a score yet (score is null).
+    """
+    day = readiness_doc['day']
+    score = readiness_doc.get('score')
+
+    if score is None:
+        return None, day
+
+    entries = [{
+        'day': day,
+        'readiness': score,
+        'source': 'oura_ring_readiness',
+        'measurement_type': 'readiness_score'
+    }]
+    return json.dumps(entries, indent=2).encode('utf-8'), day

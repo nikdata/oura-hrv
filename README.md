@@ -29,13 +29,17 @@ Oura Cloud
   ▼
 Azure Function: webhook_receiver
   │  1. Verify HMAC signature
-  │  2. Fetch sleep document from Oura API
-  │  3. Extract HRV time series + RHR (unchanged transform)
+  │  2. Fetch the sleep or daily_readiness document from Oura API
+  │  3. sleep: skip naps; extract HRV time series + RHR (unchanged
+  │     transform) + bedtime/wake time/total sleep
+  │     daily_readiness: extract the readiness score
   │  4. Write to Blob Storage at dated path
   ▼
 Azure Blob Storage (public-read)
   hrv/YYYY/MM/YYYY-MM-DD_sleep-hrv.json
   rhr/YYYY/MM/YYYY-MM-DD_sleep-rhr.json
+  sleep/YYYY/MM/YYYY-MM-DD_sleep.json
+  readiness/YYYY/MM/YYYY-MM-DD_readiness.json
   ▲
 Apple Shortcut → Apple Health  (manually triggered)
 ```
@@ -123,6 +127,17 @@ python scripts/create_subscription.py \
 
 This registers `sleep/create` and `sleep/update` subscriptions. Oura will send a verification challenge to confirm your endpoint works.
 
+Run it a second time with `--data-type daily_readiness` to register the `daily_readiness/create` and `daily_readiness/update` subscriptions (needed for readiness scores):
+
+```bash
+python scripts/create_subscription.py \
+  --callback-url https://ourahrv-func.azurewebsites.net/api/webhook \
+  --client-id <oura-client-id> \
+  --client-secret <oura-client-secret> \
+  --verification-token <your-chosen-token> \
+  --data-type daily_readiness
+```
+
 Set the same verification token in your Function App settings:
 
 ```bash
@@ -172,7 +187,11 @@ Use `--local` to write to `test_output/` instead of blob storage.
 
 Requires `az login` and a `.env` with `OURA_CLIENT_ID` and `KEY_VAULT_URI` (credentials are pulled from Key Vault each run).
 
-For bulk backfills across a date range, use `scripts/backfill.py` instead.
+For bulk backfills across a date range, use `scripts/backfill.py` instead. It writes sleep and readiness files by default; add `--metrics hrv,rhr` to rewrite HRV/RHR too:
+
+```bash
+python scripts/backfill.py --start 2025-01-01 --end 2026-10-10
+```
 
 ## Re-authorization
 
@@ -223,6 +242,45 @@ Bare JSON array, typically one entry:
     "unit": "bpm",
     "source": "oura_ring_sleep",
     "measurement_type": "lowest_heart_rate"
+  }
+]
+```
+
+### Sleep (`sleep/YYYY/MM/YYYY-MM-DD_sleep.json`)
+
+Bare JSON array, one entry per night. Only overnight sleep (Oura's `long_sleep`) is saved — naps are skipped:
+
+```json
+[
+  {
+    "day": "2026-10-10",
+    "bedtime_start": 1760069520,
+    "bedtime_start_readable": "2026-10-09 23:12:00",
+    "bedtime_end": 1760097600,
+    "bedtime_end_readable": "2026-10-10 07:00:00",
+    "timezone_offset": "-0500",
+    "total_sleep_seconds": 25200,
+    "total_sleep_hours": 7.0,
+    "time_in_bed_seconds": 28080,
+    "source": "oura_ring_sleep",
+    "measurement_type": "long_sleep"
+  }
+]
+```
+
+`bedtime_start`/`bedtime_end` are unix timestamps; the `_readable` versions are local time where you slept. `total_sleep_seconds` is actual sleep (excludes awake time in bed).
+
+### Readiness (`readiness/YYYY/MM/YYYY-MM-DD_readiness.json`)
+
+Bare JSON array, one entry per day:
+
+```json
+[
+  {
+    "day": "2026-10-10",
+    "readiness": 82,
+    "source": "oura_ring_readiness",
+    "measurement_type": "readiness_score"
   }
 ]
 ```

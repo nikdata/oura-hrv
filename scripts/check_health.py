@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pipeline health check — run this to see if everything is working.
 
-Checks blob storage for recent data, validates Oura tokens, and
+Checks blob storage for recent data (HRV, RHR, sleep, readiness), validates Oura tokens, and
 confirms webhook subscriptions are active. Prints a clear summary
 with fix instructions for any problems found.
 
@@ -87,8 +87,20 @@ def check_env_vars():
     return all_good
 
 
+METRICS = ("hrv", "rhr", "sleep", "readiness")
+LABELS = {"hrv": "HRV", "rhr": "RHR", "sleep": "Sleep", "readiness": "Readiness"}
+
+# Webhook subscriptions the pipeline needs, with what breaks if one is missing
+REQUIRED_SUBSCRIPTIONS = {
+    ("sleep", "create"): "new sleep data won't trigger the pipeline",
+    ("sleep", "update"): "revised sleep data won't be captured",
+    ("daily_readiness", "create"): "new readiness scores won't be captured",
+    ("daily_readiness", "update"): "revised readiness scores won't be captured",
+}
+
+
 def check_blob_storage(days):
-    """Check if HRV/RHR files exist in blob storage for recent dates."""
+    """Check if HRV/RHR/sleep/readiness files exist in blob storage for recent dates."""
     heading("2. Blob storage (recent data)")
 
     account_url = os.environ.get("BLOB_ACCOUNT_URL", "https://ourahrvstore.blob.core.windows.net")
@@ -107,40 +119,49 @@ def check_blob_storage(days):
         return False
 
     today = datetime.now().date()
-    missing_dates = []
-    found_dates = []
+    missing_by_date = {}
 
     for i in range(days):
-        date = today - timedelta(days=i)
-        date_str = date.isoformat()
+        date_str = (today - timedelta(days=i)).isoformat()
+        present = {m: _blob_exists(container, blob_path(m, date_str)) for m in METRICS}
+        have = [LABELS[m] for m in METRICS if present[m]]
+        missing = [m for m in METRICS if not present[m]]
 
-        hrv_name = blob_path("hrv", date_str)
-        rhr_name = blob_path("rhr", date_str)
-
-        hrv_exists = _blob_exists(container, hrv_name)
-        rhr_exists = _blob_exists(container, rhr_name)
-
-        if hrv_exists and rhr_exists:
+        if not missing:
             # Get the last modified time so you can see when it was written
-            hrv_props = container.get_blob_client(hrv_name).get_blob_properties()
+            hrv_props = container.get_blob_client(blob_path("hrv", date_str)).get_blob_properties()
             modified = hrv_props.last_modified.strftime("%Y-%m-%d %H:%M UTC")
-            ok(f"{date_str}: HRV + RHR present (last updated {modified})")
-            found_dates.append(date_str)
-        elif hrv_exists or rhr_exists:
-            has = "HRV" if hrv_exists else "RHR"
-            missing = "RHR" if hrv_exists else "HRV"
-            warn(f"{date_str}: {has} present, {missing} missing")
-            missing_dates.append(date_str)
+            ok(f"{date_str}: {' + '.join(have)} present (last updated {modified})")
+        elif have:
+            warn(f"{date_str}: {', '.join(have)} present; missing {', '.join(LABELS[m] for m in missing)}")
+            missing_by_date[date_str] = missing
         else:
             fail(f"{date_str}: no data")
-            missing_dates.append(date_str)
+            missing_by_date[date_str] = missing
 
-    if missing_dates:
-        print(f"\n  {BOLD}Fix:{RESET} Backfill missing dates:")
-        for d in missing_dates:
-            print(f"    python scripts/fill_missing.py {d}")
+    if missing_by_date:
+        print(f"\n  {BOLD}Fix:{RESET} Backfill missing dates (skip any day you didn't wear the ring):")
+        for cmd in fix_commands(missing_by_date):
+            print(f"    {cmd}")
 
-    return len(missing_dates) == 0
+    return not missing_by_date
+
+
+def fix_commands(missing_by_date):
+    """Commands to backfill each date's missing files.
+
+    fill_missing.py handles HRV/RHR; backfill.py handles sleep/readiness.
+    """
+    cmds = []
+    for date_str, missing in missing_by_date.items():
+        if "hrv" in missing or "rhr" in missing:
+            cmds.append(f"python scripts/fill_missing.py {date_str}")
+        other = [m for m in missing if m in ("sleep", "readiness")]
+        if other:
+            cmds.append(
+                f"python scripts/backfill.py --start {date_str} --end {date_str} --metrics {','.join(other)}"
+            )
+    return cmds
 
 
 def _blob_exists(container, name):
@@ -195,39 +216,28 @@ def check_webhook_subscriptions():
         print(f"      --callback-url https://ourahrv-func.azurewebsites.net/api/webhook \\")
         print(f"      --client-id <your-client-id> --client-secret <your-client-secret> \\")
         print(f"      --verification-token <your-token>")
+        print(f"    Then run it again with --data-type daily_readiness")
         return False
 
-    # Check for the two subscriptions we need
-    found_create = False
-    found_update = False
-
+    found = set()
     for sub in subs:
         data_type = sub.get("data_type", "?")
         event_type = sub.get("event_type", "?")
         sub_id = sub.get("id", "?")
         expiration = sub.get("expiration_time", "unknown")
 
-        label = f"{data_type}/{event_type} (id: {sub_id[:16]}..., expires: {expiration})"
-
-        if data_type == "sleep" and event_type == "create":
-            ok(label)
-            found_create = True
-        elif data_type == "sleep" and event_type == "update":
-            ok(label)
-            found_update = True
-        else:
-            ok(label)
+        ok(f"{data_type}/{event_type} (id: {sub_id[:16]}..., expires: {expiration})")
+        found.add((data_type, event_type))
 
     all_good = True
-    if not found_create:
-        warn("Missing sleep/create subscription — new sleep data won't trigger the pipeline")
-        all_good = False
-    if not found_update:
-        warn("Missing sleep/update subscription — revised sleep data won't be captured")
-        all_good = False
+    for (data_type, event_type), consequence in REQUIRED_SUBSCRIPTIONS.items():
+        if (data_type, event_type) not in found:
+            warn(f"Missing {data_type}/{event_type} subscription — {consequence}")
+            all_good = False
 
     if not all_good:
         print(f"\n  {BOLD}Fix:{RESET} Re-create the missing subscription(s) with scripts/create_subscription.py")
+        print("    (add --data-type daily_readiness for the readiness ones)")
 
     return all_good
 
