@@ -40,11 +40,28 @@ Azure Blob Storage (public-read)
   rhr/YYYY/MM/YYYY-MM-DD_sleep-rhr.json
   sleep/YYYY/MM/YYYY-MM-DD_sleep.json
   readiness/YYYY/MM/YYYY-MM-DD_readiness.json
-  ▲
-Apple Shortcut → Apple Health  (manually triggered)
+  ▲                                   │ sleep/ + readiness/ only
+Apple Shortcut → Apple Health         ▼ Event Grid (BlobCreated)
+  (manually triggered)              notion-automation: track_health
+                                      → Notion Health DB + My Habits calendar
 ```
 
 A second timer Function (`renew_subscriptions`) runs daily to keep the webhook subscription alive.
+
+### Notion (sleep + readiness)
+
+New or overwritten `sleep/` and `readiness/` blobs are pushed to the **`track_health`** function in
+the `notion-automation` repo via an **Event Grid system topic** on this storage account
+(`ourahrvstore-events`, subscription `notion-track-health`). That function reads the blob with its
+own managed identity (**Storage Blob Data Reader** on `oura-data`) and upserts a Notion Health row
+per day. HRV/RHR blobs never fire it. All three resources are in `infra/main.bicep`, gated on the
+`notionFunctionAppId` / `notionFunctionPrincipalId` params (they were created with `az` on
+2026-10-10; leave the params empty on a redeploy and the existing ones are left alone).
+
+> **Writing sleep/readiness blobs now reaches Notion.** Any write under `sleep/` or `readiness/` —
+> the webhook, `fill_missing.py`, or `backfill.py` — fires `track_health`. That's what you want for a
+> single day, but a **bulk sleep/readiness backfill** would create a Health row *and* a My Habits
+> "Daily Habits" card for every day in the range. HRV/RHR-only backfills are unaffected.
 
 ## Prerequisites
 
@@ -211,7 +228,7 @@ Use `--local` to write to `test_output/` instead of blob storage.
 
 Requires `az login` and a `.env` with `OURA_CLIENT_ID` and `KEY_VAULT_URI` (credentials are pulled from Key Vault each run).
 
-For bulk backfills across a date range, use `scripts/backfill.py` instead. It writes sleep and readiness files by default; add `--metrics hrv,rhr` to rewrite HRV/RHR too:
+For bulk backfills across a date range, use `scripts/backfill.py` instead. It writes sleep and readiness files by default (which now also flow into Notion — see "Notion (sleep + readiness)" above); add `--metrics hrv,rhr` to rewrite HRV/RHR too:
 
 ```bash
 python scripts/backfill.py --start 2025-01-01 --end 2026-10-10
