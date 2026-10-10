@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fill missing HRV/RHR data for a single date.
+"""Fill missing Oura data (HRV, RHR, sleep, readiness) for a single date.
 
-Checks Azure Blob Storage for existing data. If either HRV or RHR is
-missing, fetches from the Oura API and uploads only what's absent.
+Checks Azure Blob Storage for existing files. For any that are missing,
+fetches from the Oura API and uploads only what's absent. Only overnight
+sleep ("long_sleep") is used — naps are skipped.
 
 Usage:
     python scripts/fill_missing.py 2026-08-19
@@ -15,29 +16,18 @@ Requires:
 import argparse
 import os
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
-import requests
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from core.data_processor import process_sleep_document
-from core.oura_client import refresh_access_token, API_BASE
+from core.data_processor import process_readiness_document
+from core.oura_client import refresh_access_token
 from core.blob_store import blob_path
+from backfill import ALL_METRICS, SLEEP_METRICS, build_sleep_files, fetch_all, pick_overnight_by_day
 
-
-def fetch_sleep_for_date(access_token, date_str):
-    url = f"{API_BASE}/usercollection/sleep?start_date={date_str}&end_date={date_str}"
-    response = requests.get(url, headers={"Authorization": f"Bearer {access_token}"})
-    if response.status_code == 429:
-        retry_after = int(response.headers.get("Retry-After", "60"))
-        print(f"  Rate limited, waiting {retry_after}s...")
-        time.sleep(retry_after)
-        response = requests.get(url, headers={"Authorization": f"Bearer {access_token}"})
-    response.raise_for_status()
-    return response.json().get("data", [])
+LABELS = {"hrv": "HRV", "rhr": "RHR", "sleep": "Sleep", "readiness": "Readiness"}
 
 
 def blob_exists(container_client, name):
@@ -49,14 +39,38 @@ def blob_exists(container_client, name):
         return False
 
 
+def build_fills(day, missing, sessions, readiness_docs):
+    """Work out the file contents for each missing metric on `day`.
+
+    Returns [(metric, bytes or None)]. None means Oura has no valid data
+    for that metric on that day (e.g. only a nap, or no readiness score).
+    """
+    fills = []
+
+    sleep_missing = [m for m in missing if m in SLEEP_METRICS]
+    if sleep_missing:
+        night = pick_overnight_by_day(sessions).get(day)
+        if night:
+            fills += [(m, data) for m, _, data in build_sleep_files(night, sleep_missing)]
+        else:
+            fills += [(m, None) for m in sleep_missing]
+
+    if "readiness" in missing:
+        doc = next((d for d in readiness_docs if d.get("day") == day), None)
+        data = process_readiness_document(doc)[0] if doc else None
+        fills.append(("readiness", data))
+
+    return fills
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Fill missing Oura HRV/RHR data for a single date")
+    parser = argparse.ArgumentParser(description="Fill missing Oura data for a single date")
     parser.add_argument("date", help="Date to check/fill (YYYY-MM-DD)")
     parser.add_argument("--local", action="store_true", help="Write to test_output/ instead of blob storage")
     args = parser.parse_args()
 
     try:
-        datetime.strptime(args.date, "%Y-%m-%d")
+        day = datetime.strptime(args.date, "%Y-%m-%d").date()
     except ValueError:
         print(f"Invalid date format: {args.date} (expected YYYY-MM-DD)")
         return
@@ -67,18 +81,12 @@ def main():
             print(f"Missing {var} — set it in .env or environment")
             return
 
-    hrv_name = blob_path("hrv", args.date)
-    rhr_name = blob_path("rhr", args.date)
-
     container_client = None
     output_dir = None
-    hrv_missing = True
-    rhr_missing = True
 
     if args.local:
         output_dir = Path(__file__).resolve().parent.parent / "test_output"
-        hrv_missing = not (output_dir / hrv_name).exists()
-        rhr_missing = not (output_dir / rhr_name).exists()
+        exists = lambda name: (output_dir / name).exists()  # noqa: E731
     else:
         from azure.identity import DefaultAzureCredential
         from azure.storage.blob import BlobServiceClient
@@ -86,64 +94,45 @@ def main():
         container_name = os.environ.get("BLOB_CONTAINER_NAME", "oura-data")
         service = BlobServiceClient(account_url, credential=DefaultAzureCredential())
         container_client = service.get_container_client(container_name)
-
+        exists = lambda name: blob_exists(container_client, name)  # noqa: E731
         print(f"Checking blob storage for {args.date}...")
-        hrv_missing = not blob_exists(container_client, hrv_name)
-        rhr_missing = not blob_exists(container_client, rhr_name)
 
-    print(f"  HRV ({hrv_name}): {'MISSING' if hrv_missing else 'present'}")
-    print(f"  RHR ({rhr_name}): {'MISSING' if rhr_missing else 'present'}")
+    missing = []
+    for metric in ALL_METRICS:
+        name = blob_path(metric, args.date)
+        present = exists(name)
+        print(f"  {LABELS[metric]:<10} ({name}): {'present' if present else 'MISSING'}")
+        if not present:
+            missing.append(metric)
 
-    if not hrv_missing and not rhr_missing:
-        print("\nBoth files already exist. Nothing to do.")
+    if not missing:
+        print("\nAll files already exist. Nothing to do.")
         return
 
     print("\nRefreshing access token via Key Vault...")
     access_token = refresh_access_token()
 
-    print(f"Fetching sleep data for {args.date}...")
-    sessions = fetch_sleep_for_date(access_token, args.date)
-
-    if not sessions:
-        print(f"No sleep sessions found for {args.date}.")
-        return
-
-    session = sessions[-1]
-    hrv_bytes, rhr_bytes, sleep_date = process_sleep_document(session)
+    print(f"Fetching Oura data for {args.date}...")
+    sessions = fetch_all(access_token, "sleep", day, day) if any(m in SLEEP_METRICS for m in missing) else []
+    readiness_docs = fetch_all(access_token, "daily_readiness", day, day) if "readiness" in missing else []
 
     uploaded = []
-
-    if hrv_missing:
-        if not hrv_bytes:
-            print("  HRV: no valid data in sleep session")
+    for metric, data in build_fills(args.date, missing, sessions, readiness_docs):
+        name = blob_path(metric, args.date)
+        if not data:
+            print(f"  {LABELS[metric]}: no valid data from Oura for this day (no overnight sleep / no score)")
         elif args.local:
-            p = output_dir / hrv_name
+            p = output_dir / name
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_bytes(hrv_bytes)
-            uploaded.append(f"HRV -> {p}")
+            p.write_bytes(data)
+            uploaded.append(f"{LABELS[metric]} -> {p}")
         else:
             from azure.storage.blob import ContentSettings
             container_client.upload_blob(
-                hrv_name, hrv_bytes, overwrite=True,
+                name, data, overwrite=True,
                 content_settings=ContentSettings(content_type="application/json"),
             )
-            uploaded.append(f"HRV -> {hrv_name}")
-
-    if rhr_missing:
-        if not rhr_bytes:
-            print("  RHR: no valid data in sleep session")
-        elif args.local:
-            p = output_dir / rhr_name
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_bytes(rhr_bytes)
-            uploaded.append(f"RHR -> {p}")
-        else:
-            from azure.storage.blob import ContentSettings
-            container_client.upload_blob(
-                rhr_name, rhr_bytes, overwrite=True,
-                content_settings=ContentSettings(content_type="application/json"),
-            )
-            uploaded.append(f"RHR -> {rhr_name}")
+            uploaded.append(f"{LABELS[metric]} -> {name}")
 
     if uploaded:
         print("\nUploaded:")

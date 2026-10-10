@@ -16,10 +16,8 @@ Priority items to finish. Check this file at the start of every session, work th
 
 - [ ] **Consider rotating the Oura client secret and refresh token.** Before `.funcignore` was added on 2026-10-10, deploys likely uploaded `.env` to the Function App. Storage is private and the latest deploy replaced the package, so the risk is low. To rotate: create a new client secret in the Oura developer portal, then run `scripts/oauth_bootstrap.py`.
 
-- [ ] **Fix `fill_missing.py` for sleep data.** It asks Oura for `start_date == end_date`, but Oura's sleep list leaves out the `end_date` day, so it gets nothing back. It also doesn't skip naps or handle sleep/readiness files. `backfill.py` already has the fix (ask for `end + 1 day`, use `pick_overnight_by_day`).
-
-- [ ] **Fix the "Oura API connectivity" check in `check_health.py`.** It has the same `start_date == end_date` problem, so it always says "no sleep data for today yet".
-
 ## Done
 
 - [x] 2026-10-10: Added sleep times and the readiness score, plus the nap filter. Deployed, registered the readiness webhooks, backfilled sleep and readiness from 2025-01-01, and merged to `main`.
+- [x] 2026-10-10: Fixed `fill_missing.py`. It asks Oura for `day..day+1`, skips naps, and fills all four files (HRV, RHR, sleep, readiness), uploading only what's missing. Verified on 2026-10-06 (doze + night → used the night) and on 2025-05-15 (doze only → nothing written).
+- [x] 2026-10-10: Fixed the "Oura API connectivity" check in `check_health.py` (asks for `today..tomorrow`). It now sees last night's session. The health check's fix commands also now point to `fill_missing.py` for every missing file type.

@@ -90,10 +90,10 @@ Summary
 
 ```
 2. Blob storage (recent data)
-  OK    2026-08-21: HRV + RHR present (last updated 2026-08-21 06:32 UTC)
+  OK    2026-08-21: HRV + RHR + Sleep + Readiness present (last updated 2026-08-21 06:32 UTC)
   FAIL  2026-08-20: no data
 
-  Fix: Backfill missing dates:
+  Fix: Backfill missing dates (skip any day you didn't wear the ring):
     python scripts/fill_missing.py 2026-08-20
 ```
 
@@ -319,7 +319,7 @@ Usually they don't — the daily renewal keeps them alive. But if the Function A
 python scripts/fill_missing.py 2026-08-19
 ```
 
-Checks blob storage first — only fetches and uploads what's actually missing. Safe to run multiple times.
+Checks blob storage for all four files (HRV, RHR, sleep, readiness) — only fetches and uploads what's actually missing. Skips naps. Safe to run multiple times.
 
 ### Date range
 
@@ -397,7 +397,7 @@ If you see JSON data, the blob exists and the problem is in the Shortcut (wrong 
 
 **Why:** Oura hasn't calculated a readiness score for that day yet (the score is empty).
 
-**Fix:** Usually resolves on its own with a `daily_readiness/update` event. For an old date: `python scripts/backfill.py --start <date> --end <date> --metrics readiness`.
+**Fix:** Usually resolves on its own with a `daily_readiness/update` event. For an old date: `python scripts/fill_missing.py <date>`.
 
 ### "No webhook subscriptions found" in logs
 

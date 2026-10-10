@@ -150,18 +150,9 @@ def check_blob_storage(days):
 def fix_commands(missing_by_date):
     """Commands to backfill each date's missing files.
 
-    fill_missing.py handles HRV/RHR; backfill.py handles sleep/readiness.
+    fill_missing.py checks all four files and only fills what's absent.
     """
-    cmds = []
-    for date_str, missing in missing_by_date.items():
-        if "hrv" in missing or "rhr" in missing:
-            cmds.append(f"python scripts/fill_missing.py {date_str}")
-        other = [m for m in missing if m in ("sleep", "readiness")]
-        if other:
-            cmds.append(
-                f"python scripts/backfill.py --start {date_str} --end {date_str} --metrics {','.join(other)}"
-            )
-    return cmds
+    return [f"python scripts/fill_missing.py {date_str}" for date_str in missing_by_date]
 
 
 def _blob_exists(container, name):
@@ -242,6 +233,15 @@ def check_webhook_subscriptions():
     return all_good
 
 
+def today_sleep_params(today):
+    """Query params for today's sleep sessions.
+
+    Oura's sleep list leaves out the end_date day, so end_date must be
+    tomorrow to include last night's sleep (which belongs to today).
+    """
+    return {"start_date": today.isoformat(), "end_date": (today + timedelta(days=1)).isoformat()}
+
+
 def check_oura_api():
     """Quick check that we can actually fetch data from Oura."""
     heading("5. Oura API connectivity")
@@ -251,9 +251,11 @@ def check_oura_api():
         from core.oura_client import refresh_access_token, API_BASE
 
         access_token = refresh_access_token()
-        today = datetime.now().date().isoformat()
-        url = f"{API_BASE}/usercollection/sleep?start_date={today}&end_date={today}"
-        response = requests.get(url, headers={"Authorization": f"Bearer {access_token}"})
+        response = requests.get(
+            f"{API_BASE}/usercollection/sleep",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params=today_sleep_params(datetime.now().date()),
+        )
 
         if response.status_code == 200:
             data = response.json().get("data", [])

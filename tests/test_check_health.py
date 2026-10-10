@@ -8,19 +8,27 @@ import check_health  # noqa: E402
 
 
 class TestFixCommands:
-    def test_hrv_rhr_use_fill_missing(self):
-        assert check_health.fix_commands({"2026-10-10": ["hrv", "rhr"]}) == [
+    def test_one_fill_missing_per_date(self):
+        assert check_health.fix_commands({
+            "2026-10-09": ["sleep"],
+            "2026-10-10": list(check_health.METRICS),
+        }) == [
+            "python scripts/fill_missing.py 2026-10-09",
             "python scripts/fill_missing.py 2026-10-10",
         ]
 
-    def test_sleep_readiness_use_backfill(self):
-        assert check_health.fix_commands({"2026-10-10": ["sleep", "readiness"]}) == [
-            "python scripts/backfill.py --start 2026-10-10 --end 2026-10-10 --metrics sleep,readiness",
-        ]
 
-    def test_everything_missing(self):
-        cmds = check_health.fix_commands({"2026-10-10": list(check_health.METRICS)})
-        assert len(cmds) == 2
+class TestTodaySleepParams:
+    def test_end_date_is_tomorrow(self):
+        # Oura's sleep list leaves out end_date, so asking for today..today returns nothing
+        from datetime import date
+        assert check_health.today_sleep_params(date(2026, 10, 10)) == {
+            "start_date": "2026-10-10", "end_date": "2026-10-11",
+        }
+
+    def test_month_rollover(self):
+        from datetime import date
+        assert check_health.today_sleep_params(date(2026, 10, 31))["end_date"] == "2026-11-01"
 
 
 class TestCheckWebhookSubscriptions:
@@ -73,4 +81,4 @@ class TestCheckBlobStorage:
         assert self._run(self._today_paths(["hrv", "rhr"])) is False
         out = capsys.readouterr().out
         assert "missing Sleep, Readiness" in out
-        assert "--metrics sleep,readiness" in out
+        assert "fill_missing.py" in out

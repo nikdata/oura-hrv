@@ -205,7 +205,7 @@ If a webhook was missed (e.g. phone didn't sync in time), you can backfill a sin
 python scripts/fill_missing.py 2026-08-19
 ```
 
-The script checks blob storage for both HRV and RHR files. If either is missing, it fetches from the Oura API and uploads only what's absent. If both already exist, it reports that and stops.
+The script checks blob storage for all four files (HRV, RHR, sleep, readiness). For any that are missing, it fetches from the Oura API and uploads only what's absent. If they all exist, it reports that and stops. Only overnight sleep is used — naps are skipped — so a day with only a nap gets no sleep-derived files.
 
 Use `--local` to write to `test_output/` instead of blob storage.
 

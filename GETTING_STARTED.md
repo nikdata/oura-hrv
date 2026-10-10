@@ -362,9 +362,9 @@ python scripts/check_health.py --days 7 # check the last week
 **When to run:** When a webhook was missed for a specific date (phone didn't sync in time, Function was down, etc.)
 
 **What it does:**
-1. Checks Blob Storage for existing HRV/RHR files for that date
-2. If either is missing, fetches from the Oura API and uploads
-3. If both exist, reports that and stops
+1. Checks Blob Storage for the HRV, RHR, sleep and readiness files for that date
+2. For any that are missing, fetches from the Oura API and uploads just those (overnight sleep only — naps are skipped)
+3. If all four exist, reports that and stops
 
 Use `--local` to write to `test_output/` instead of Blob Storage (good for testing).
 
@@ -374,7 +374,9 @@ Use `--local` to write to `test_output/` instead of Blob Storage (good for testi
 
 **What it does:** Same as `fill_missing.py` but for a range of dates. Fetches in 30-day chunks to stay within Oura's API limits.
 
-**Note:** This script uses `.env` credentials directly (not Key Vault), because it was designed for one-time bulk operations where Key Vault round-trips would be slow.
+By default it writes only sleep and readiness files; use `--metrics hrv,rhr,sleep,readiness` to include HRV/RHR.
+
+**Note:** Like `fill_missing.py`, this script gets Oura credentials from Key Vault (needs `az login`), the same as production. That keeps the refresh token in one place so a backfill can't break the live pipeline's token.
 
 ### `test_local.py` — End-to-end test without Azure
 
