@@ -4,7 +4,7 @@ Priority items to finish. Check this file at the start of every session, work th
 
 ## Open
 
-- [ ] **Verify the Notion push (Event Grid → notion-automation `track_health`) on 2026-10-11.** Built and deployed 2026-10-10 on branch `health-sleep` (this repo: `infra/main.bicep` only). After the morning sync, Notion should have exactly **one** Health row and one My Habits card for 2026-10-11 with `😴` sleep and `💪` readiness. If good, merge `health-sleep` → `main` here and in `notion-automation`. Tracked in `my-second-brain/CLAUDE.md` ("Next session — check first").
+- [x] **Verify the Notion push (Event Grid → notion-automation `track_health`).** Done 2026-10-10: simulated a new-day race (re-saved 10/5 blobs together) → one Health row + one card; backfilled 10/5–10/9 the same way. `health-sleep` merged to `main` here and in `notion-automation`.
 
 - [ ] **Before any sleep/readiness backfill:** those writes now flow into Notion (one Health row + one habit card per day). Make sure `--metrics` excludes `sleep`/`readiness` unless you want Notion history filled in. The HRV/RHR backfill below is unaffected.
 
