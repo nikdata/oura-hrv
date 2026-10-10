@@ -3,13 +3,13 @@
 // =====================================================================
 // This file defines every Azure resource needed to run the project.
 // Deploy with:
-//   az deployment group create --resource-group oura-hrv-rg --template-file infra/main.bicep
+//   az deployment group create --resource-group rg-oura --template-file infra/main.bicep
 //
 // After deployment, you still need to:
 //   1. Set OURA_CLIENT_ID in the Function App settings (it's not in this template
 //      because it varies per user and isn't sensitive enough for Key Vault)
 //   2. Run scripts/oauth_bootstrap.py to seed tokens into Key Vault
-//   3. Deploy the Function code: func azure functionapp publish ourahrv-func
+//   3. Deploy the Function code: func azure functionapp publish ourahrv-func --python
 //   4. Run scripts/create_subscription.py to register webhooks
 // =====================================================================
 

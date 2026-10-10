@@ -112,7 +112,7 @@ The simplest way — no browser needed.
 **Stream logs in real time** (useful when testing — sync your ring and watch):
 
 ```bash
-az webapp log tail --name ourahrv-func --resource-group oura-hrv-rg
+az webapp log tail --name ourahrv-func --resource-group rg-oura
 ```
 
 This shows logs as they happen. Sync your ring in the Oura app and you should see output like:
@@ -131,7 +131,7 @@ Press `Ctrl+C` to stop watching.
 # See the last 10 log entries
 az monitor app-insights events show \
   --app ourahrv-insights \
-  --resource-group oura-hrv-rg \
+  --resource-group rg-oura \
   --type traces \
   --order-by timestamp \
   --top 10
@@ -354,7 +354,7 @@ uv run python -m pytest tests/ -v
 uv export --no-hashes > requirements.txt
 
 # 3. Deploy
-func azure functionapp publish ourahrv-func
+func azure functionapp publish ourahrv-func --python
 ```
 
 The Function App picks up the new code within a minute. No downtime — Azure swaps the code atomically.

@@ -61,10 +61,10 @@ A second timer Function (`renew_subscriptions`) runs daily to keep the webhook s
 
 ```bash
 az login
-az group create --name oura-hrv-rg --location eastus
+az group create --name rg-oura --location eastus
 
 az deployment group create \
-  --resource-group oura-hrv-rg \
+  --resource-group rg-oura \
   --template-file infra/main.bicep
 ```
 
@@ -78,7 +78,7 @@ Grant yourself Key Vault access (replace `<your-user-object-id>` — get it with
 az role assignment create \
   --role "Key Vault Secrets Officer" \
   --assignee <your-user-object-id> \
-  --scope /subscriptions/<sub-id>/resourceGroups/oura-hrv-rg/providers/Microsoft.KeyVault/vaults/ourahrv-kv
+  --scope /subscriptions/<sub-id>/resourceGroups/rg-oura/providers/Microsoft.KeyVault/vaults/ourahrv-kv
 ```
 
 Then run the bootstrap script:
@@ -97,7 +97,7 @@ This opens a browser for Oura authorization, then stores the refresh token and c
 ```bash
 az functionapp config appsettings set \
   --name ourahrv-func \
-  --resource-group oura-hrv-rg \
+  --resource-group rg-oura \
   --settings OURA_CLIENT_ID=<your-client-id>
 ```
 
@@ -108,7 +108,31 @@ az functionapp config appsettings set \
 uv export --no-hashes > requirements.txt
 
 # Deploy
-func azure functionapp publish ourahrv-func
+func azure functionapp publish ourahrv-func --python
+```
+
+`--python` is needed because Core Tools detects the language from `local.settings.json`, which usually isn't present.
+
+**Before your first deploy, create a `.funcignore`.** Without it, `func publish` uploads almost the whole folder — including `.env` (Oura secrets) and `test_output/` (your health data). The file is listed in `.gitignore`, so a fresh clone won't have it. Create it with:
+
+```
+.git*
+.venv
+.vscode
+.env
+.env.*
+.python-version
+__pycache__
+local.settings.json
+local.settings.json.example
+test_output
+tests
+example
+scripts
+infra
+*.md
+uv.lock
+pyproject.toml
 ```
 
 > **Why `requirements.txt` when we use `uv`?** Azure Functions doesn't understand `pyproject.toml` or `uv.lock`. When you deploy, Azure runs `pip install -r requirements.txt` in the cloud. We generate this file from uv to keep it in sync. See [GETTING_STARTED.md](GETTING_STARTED.md#why-two-requirementstxt-files) for details.
@@ -143,7 +167,7 @@ Set the same verification token in your Function App settings:
 ```bash
 az functionapp config appsettings set \
   --name ourahrv-func \
-  --resource-group oura-hrv-rg \
+  --resource-group rg-oura \
   --settings OURA_WEBHOOK_VERIFICATION_TOKEN=<your-chosen-token>
 ```
 
