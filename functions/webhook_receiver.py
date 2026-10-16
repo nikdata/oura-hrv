@@ -19,6 +19,11 @@
 #      - sleep: overnight sessions only (naps are skipped). Produces
 #        HRV, RHR and sleep-times files.
 #      - daily_readiness: produces the readiness score file.
+#    Oura has never actually delivered a daily_readiness webhook (the
+#    subscriptions exist and renew daily, but no event arrives), so an
+#    overnight sleep event ALSO fetches that day's readiness by date and
+#    writes the readiness file. The daily_readiness branch stays in case
+#    Oura starts sending them.
 #
 # Security: Every POST from Oura includes an HMAC signature header
 # (x-oura-signature). We verify it before processing to ensure the
@@ -35,7 +40,9 @@ from core.blob_store import upload_blob
 from core.data_processor import (
     is_overnight_sleep, process_readiness_document, process_sleep_document, process_sleep_times,
 )
-from core.oura_client import fetch_readiness_document, fetch_sleep_document, get_client_credentials
+from core.oura_client import (
+    fetch_readiness_document, fetch_readiness_for_day, fetch_sleep_document, get_client_credentials,
+)
 from core.security import verify_hmac
 
 logger = logging.getLogger(__name__)
@@ -159,6 +166,24 @@ def _handle_sleep(sleep_id: str):
     _upload("hrv", sleep_date, hrv_bytes)
     _upload("rhr", sleep_date, rhr_bytes)
     _upload("sleep", sleep_date, sleep_bytes)
+
+    # Readiness is scored from this same night, and Oura never sends us the
+    # daily_readiness webhook — so fetch it by date now. Best effort: a
+    # failure here must not fail the sleep event (Oura would retry it and
+    # rewrite the sleep files). Later sleep/update events refresh it.
+    try:
+        _write_readiness_for_day(sleep_date)
+    except Exception:
+        logger.exception(f"Fetching readiness for {sleep_date} failed — sleep files were still written")
+
+
+def _write_readiness_for_day(day: str):
+    doc = fetch_readiness_for_day(day)
+    if doc is None:
+        logger.warning(f"No readiness document from Oura for {day} yet")
+        return
+    readiness_bytes, _ = process_readiness_document(doc)
+    _upload("readiness", day, readiness_bytes)
 
 
 def _handle_readiness(readiness_id: str):
