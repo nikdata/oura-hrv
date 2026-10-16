@@ -397,7 +397,19 @@ If you see JSON data, the blob exists and the problem is in the Shortcut (wrong 
 
 **Why:** Oura hasn't calculated a readiness score for that day yet (the score is empty).
 
-**Fix:** Usually resolves on its own with a `daily_readiness/update` event. For an old date: `python scripts/fill_missing.py <date>`.
+**Fix:** Usually resolves on its own with the next `sleep/update` event, which re-fetches that day's readiness. For an old date: `python scripts/fill_missing.py <date>`.
+
+### Readiness missing but sleep present / "No readiness document from Oura for {date} yet"
+
+**Why:** Readiness is fetched by date when the night's **sleep** event arrives, because Oura doesn't
+deliver `daily_readiness` webhooks to this app (no event has ever arrived, despite live subscriptions).
+If Oura hadn't scored the day yet, or the readiness fetch failed, the sleep files are still written
+and you'll see either this warning or `Fetching readiness for {date} failed — sleep files were still
+written` in the logs.
+
+**Fix:** A later `sleep/update` that morning normally fills it in. If not, run
+`python scripts/fill_missing.py <date>`. It uploads only the missing readiness file, which also
+pushes the score to Notion.
 
 ### "No webhook subscriptions found" in logs
 

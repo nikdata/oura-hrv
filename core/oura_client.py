@@ -13,7 +13,8 @@
 #
 # 2. Document fetching:
 #    - Fetches a single sleep or daily readiness document by ID (used by
-#      the webhook receiver)
+#      the webhook receiver), and a day's readiness by date (fetched
+#      alongside each night's sleep — see fetch_readiness_for_day)
 #    - Automatic retry on 401 (expired access token)
 #
 # 3. Webhook subscription management:
@@ -145,6 +146,30 @@ def fetch_sleep_document(sleep_id: str) -> dict:
 def fetch_readiness_document(readiness_id: str) -> dict:
     """Fetch a daily readiness document (score + contributors)."""
     return fetch_document("daily_readiness", readiness_id)
+
+
+def fetch_readiness_for_day(day: str) -> dict | None:
+    """Fetch the daily readiness document for one day (YYYY-MM-DD), or None.
+
+    Oura has never delivered our daily_readiness webhooks (the subscriptions
+    exist and renew, but no event ever arrives), so the webhook receiver
+    calls this when a night's sleep comes in. Unlike the sleep list, the
+    daily_readiness list includes its end_date, so day..day returns that day.
+    """
+    access_token = refresh_access_token()
+
+    url = f"{API_BASE}/usercollection/daily_readiness"
+    params = {"start_date": day, "end_date": day}
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code == 401:
+        logger.warning("Got 401 fetching daily_readiness list, refreshing token and retrying")
+        headers["Authorization"] = f"Bearer {refresh_access_token()}"
+        response = requests.get(url, headers=headers, params=params)
+
+    response.raise_for_status()
+    return next((d for d in response.json().get("data", []) if d.get("day") == day), None)
 
 
 # -----------------------------------------------------------------------

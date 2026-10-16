@@ -33,8 +33,10 @@ def mocks():
          patch.object(wr, "verify_hmac", return_value=True) as verify, \
          patch.object(wr, "fetch_sleep_document") as fetch_sleep, \
          patch.object(wr, "fetch_readiness_document") as fetch_readiness, \
+         patch.object(wr, "fetch_readiness_for_day", return_value=None) as fetch_readiness_day, \
          patch.object(wr, "upload_blob", side_effect=lambda m, d, b: f"{m}/{d}") as upload:
-        yield {"verify": verify, "fetch_sleep": fetch_sleep, "fetch_readiness": fetch_readiness, "upload": upload}
+        yield {"verify": verify, "fetch_sleep": fetch_sleep, "fetch_readiness": fetch_readiness,
+               "fetch_readiness_day": fetch_readiness_day, "upload": upload}
 
 
 def _uploaded_metrics(upload_mock):
@@ -54,6 +56,33 @@ class TestWebhookReceiver:
             assert call.args[1] == "2026-10-10"
         sleep_call = next(c for c in mocks["upload"].call_args_list if c.args[0] == "sleep")
         assert json.loads(sleep_call.args[2])[0]["total_sleep_seconds"] == 25200
+        mocks["fetch_readiness_day"].assert_called_once_with("2026-10-10")
+
+    def test_overnight_sleep_also_writes_that_days_readiness(self, mocks):
+        mocks["fetch_sleep"].return_value = NIGHT
+        mocks["fetch_readiness_day"].return_value = READINESS
+        resp = wr.webhook_receiver(_post({"data_type": "sleep", "event_type": "update", "object_id": "night-id"}))
+
+        assert resp.status_code == 200
+        assert _uploaded_metrics(mocks["upload"]) == ["hrv", "readiness", "rhr", "sleep"]
+        readiness_call = next(c for c in mocks["upload"].call_args_list if c.args[0] == "readiness")
+        assert readiness_call.args[1] == "2026-10-10"
+        assert json.loads(readiness_call.args[2])[0]["readiness"] == 82
+
+    def test_overnight_sleep_with_unscored_readiness_skips_readiness(self, mocks):
+        mocks["fetch_sleep"].return_value = NIGHT
+        mocks["fetch_readiness_day"].return_value = {**READINESS, "score": None}
+        wr.webhook_receiver(_post({"data_type": "sleep", "event_type": "create", "object_id": "night-id"}))
+
+        assert _uploaded_metrics(mocks["upload"]) == ["hrv", "rhr", "sleep"]
+
+    def test_readiness_fetch_failure_does_not_fail_sleep(self, mocks):
+        mocks["fetch_sleep"].return_value = NIGHT
+        mocks["fetch_readiness_day"].side_effect = RuntimeError("Oura 500")
+        resp = wr.webhook_receiver(_post({"data_type": "sleep", "event_type": "create", "object_id": "night-id"}))
+
+        assert resp.status_code == 200
+        assert _uploaded_metrics(mocks["upload"]) == ["hrv", "rhr", "sleep"]
 
     @pytest.mark.parametrize("nap_type", ["sleep", "late_nap", "rest", "deleted"])
     def test_nap_writes_nothing(self, mocks, nap_type):
@@ -62,6 +91,7 @@ class TestWebhookReceiver:
 
         assert resp.status_code == 200
         mocks["upload"].assert_not_called()
+        mocks["fetch_readiness_day"].assert_not_called()
 
     def test_readiness_writes_readiness_only(self, mocks):
         mocks["fetch_readiness"].return_value = READINESS

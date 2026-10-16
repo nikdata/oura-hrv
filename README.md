@@ -31,7 +31,8 @@ Azure Function: webhook_receiver
   │  1. Verify HMAC signature
   │  2. Fetch the sleep or daily_readiness document from Oura API
   │  3. sleep: skip naps; extract HRV time series + RHR (unchanged
-  │     transform) + bedtime/wake time/total sleep
+  │     transform) + bedtime/wake time/total sleep; then ALSO fetch
+  │     that day's readiness by date (see note below)
   │     daily_readiness: extract the readiness score
   │  4. Write to Blob Storage at dated path
   ▼
@@ -47,6 +48,13 @@ Apple Shortcut → Apple Health         ▼ Event Grid (BlobCreated)
 ```
 
 A second timer Function (`renew_subscriptions`) runs daily to keep the webhook subscription alive.
+
+> **Readiness rides on the sleep event.** Oura has never delivered a `daily_readiness` webhook to
+> this app. The subscriptions exist and renew daily, but no event arrives (confirmed in App Insights
+> 2026-10-15). So each overnight `sleep` event also calls `fetch_readiness_for_day(day)` and writes
+> `readiness/…` if Oura has scored the day. This is best effort: a readiness failure is logged and
+> never fails the sleep event. Later `sleep/update` events refresh it. The `daily_readiness` branch
+> and subscriptions stay in place in case Oura starts sending them.
 
 ### Notion (sleep + readiness)
 
@@ -168,7 +176,7 @@ python scripts/create_subscription.py \
 
 This registers `sleep/create` and `sleep/update` subscriptions. Oura will send a verification challenge to confirm your endpoint works.
 
-Run it a second time with `--data-type daily_readiness` to register the `daily_readiness/create` and `daily_readiness/update` subscriptions (needed for readiness scores):
+Run it a second time with `--data-type daily_readiness` to register the `daily_readiness/create` and `daily_readiness/update` subscriptions. This step is optional: Oura hasn't delivered these events in practice, and readiness is fetched alongside each sleep event instead (see Architecture):
 
 ```bash
 python scripts/create_subscription.py \
