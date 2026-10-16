@@ -151,7 +151,7 @@ az monitor app-insights events show \
 
 For searching across many invocations or finding specific errors.
 
-1. In the Azure Portal, go to your Application Insights resource (`ourahrv-insights`)
+1. In the Azure Portal, go to the Application Insights resource (`ourahrv-func` in `rg-oura`, the same name as the Function App)
 2. Click **Logs** in the left sidebar (opens a query editor)
 3. Run queries like:
 
@@ -181,6 +181,20 @@ traces
 | where message contains "Renewed subscription" or message contains "No webhook subscriptions"
 | order by timestamp desc
 ```
+
+From the terminal, the same queries run with `az`. **Always pass a time range:**
+
+```bash
+az monitor app-insights query --app ourahrv-func -g rg-oura --offset 24h \
+  --analytics-query "traces | where message startswith 'Wrote' | project timestamp, message | order by timestamp asc"
+```
+
+> ⚠️ **`az monitor app-insights query` only looks at the last hour by default** (`--offset 1h`). A
+> `where timestamp > …` inside the query can't widen that window. This app is quiet most of the day,
+> so without `--offset 24h` (or `--start-time`) the result is usually **empty, even though the logs
+> are there**. That looks like broken logging, but it isn't. The Portal's Logs blade has its own
+> time-range picker (default: last 24 hours). The raw rows also live in the Log Analytics workspace
+> `DefaultWorkspace-…-EUS` (tables `AppTraces`/`AppRequests`, `AppRoleName == 'ourahrv-func'`).
 
 The query language is called **KQL** (Kusto Query Language). It reads like English — `|` is "then", `where` filters rows, `order by` sorts, `take` limits results. You can mostly guess the syntax.
 
