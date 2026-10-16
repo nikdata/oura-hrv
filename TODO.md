@@ -8,8 +8,6 @@ Priority items to finish. Check this file at the start of every session, work th
 
 - [ ] **Before any sleep/readiness backfill:** those writes now flow into Notion (one Health row + one habit card per day). Make sure `--metrics` excludes `sleep`/`readiness` unless you want Notion history filled in. The HRV/RHR backfill below is unaffected.
 
-- [ ] **Confirm readiness now arrives with the sleep event.** Sleep worked on its own from 2026-10-12. Readiness didn't, because Oura never sent a `daily_readiness` webhook. Fixed and deployed 2026-10-15 (see Done). The morning of **2026-10-16** is the first real test. After the ring syncs, `readiness/2026/10/2026-10-16_readiness.json` should exist, and the logs should show `Wrote readiness/…` right after `Wrote sleep/…`. Also run `uv run python scripts/check_health.py --days 2`.
-
 - [ ] **Fix the HRV/RHR history.** Before the nap filter, evening dozes overwrote the night's data on **25 days**, and **58 nights** never got an HRV/RHR file. To fix it, run this yourself (it writes about 1,300 blobs, which Claude's permission check blocks):
   ```
   uv run python scripts/backfill.py --start 2025-01-01 --end 2026-10-10 --metrics hrv,rhr
@@ -22,6 +20,7 @@ Priority items to finish. Check this file at the start of every session, work th
 
 ## Done
 
+- [x] 2026-10-16: **Confirmed readiness arrives live with the sleep event.** On the first real morning, both sleep events (10:40 `create`, 11:51 `update` UTC) logged `Wrote readiness/2026/10/2026-10-16_readiness.json` about a second after `Wrote sleep/…`, with no readiness warnings. Event Grid delivered the blob events, and `track_health` wrote readiness 73 to the Notion Health row and the My Habits card (`😴 7h 19m · 💪 73`). `check_health.py --days 2` passed. Note: this app's logs are in the Log Analytics workspace (`DefaultWorkspace-…-EUS`, table `AppTraces`). `az monitor app-insights query --app ourahrv-func` returns nothing.
 - [x] 2026-10-15: **Readiness now rides on the sleep event.** App Insights showed every webhook POST from 10/9 to 10/15 was a sleep event, and none was ever `daily_readiness`, although both readiness subscriptions renew daily. So the readiness blobs had stopped after the 10/10 backfill. `webhook_receiver` now fetches that day's readiness (`fetch_readiness_for_day`) after writing an overnight sleep's files. Best effort: a failure is logged and never fails the sleep event. Added 4 tests (87 pass) and live-checked the lookup against Oura. Deployed, then ran `fill_missing.py` for 10/12–10/15 (scores 63/53/69/71). 10/11 had no data because the ring wasn't worn. `track_health` wrote all four to Notion.
 
 - [x] 2026-10-10: Added sleep times and the readiness score, plus the nap filter. Deployed, registered the readiness webhooks, backfilled sleep and readiness from 2025-01-01, and merged to `main`.
